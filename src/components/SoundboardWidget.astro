@@ -1,0 +1,200 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/SoundboardWidget.astro
+
+const ambientSounds = [
+  { id: "lofi",     name: "Lofi Beats",      icon: "🎵", url: "/sounds/lofi.mp3" },
+  { id: "rain",     name: "Rainfall",         icon: "🌧️", url: "/sounds/rain.mp3" },
+  { id: "keyboard", name: "Mechanical Keys",  icon: "⌨️", url: "/sounds/keyboard.mp3" },
+  { id: "cafe",     name: "Cafe Vibe",        icon: "☕", url: "/sounds/cafe.mp3" },
+  { id: "campfire", name: "Campfire",         icon: "🔥", url: "/sounds/campfire.mp3" },
+  { id: "birds",    name: "Forest Birds",     icon: "🐦", url: "/sounds/birds.mp3" }
+];
+---
+
+<div
+  id="soundboard-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="sounds"
+  data-default-x="420"
+  data-default-y="80"
+  style="width: 320px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-4 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink-subtle">
+      <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+      </svg>
+      <span class="text-xs font-semibold uppercase tracking-wider font-sans">Ambient Mixer</span>
+    </div>
+    <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize sounds widget">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="widget-body px-4 pb-4 pt-4 flex flex-col">
+    <!-- Quick Presets -->
+    <div class="grid grid-cols-4 gap-1.5 mb-4">
+      <button id="preset-study" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Study</button>
+      <button id="preset-rain"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Rainy</button>
+      <button id="preset-cafe"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Cafe</button>
+      <button id="preset-reset" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Clear</button>
+    </div>
+
+    <!-- Sound Sliders -->
+    <div class="space-y-3 mb-4">
+      {ambientSounds.map(sound => (
+        <div class="flex items-center gap-3 bg-surface-2/30 border border-hairline/50 p-2 rounded-lg" data-sound-id={sound.id}>
+          <audio id={`audio-${sound.id}`} src={sound.url} loop preload="auto"></audio>
+          <button
+            class="sound-toggle-btn w-8 h-8 rounded-md bg-surface-2 hover:bg-surface-3 flex items-center justify-center text-sm transition cursor-pointer shrink-0"
+            data-sound-id={sound.id}
+            aria-label={`Toggle ${sound.name}`}
+          >
+            {sound.icon}
+          </button>
+          <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-xs font-medium text-ink-muted truncate">{sound.name}</span>
+              <span class="sound-value-label text-[10px] font-mono text-ink-subtle shrink-0">0%</span>
+            </div>
+            <input
+              type="range" min="0" max="100" value="0"
+              class="sound-slider w-full accent-primary h-1 bg-hairline rounded-lg appearance-none cursor-pointer"
+              data-sound-id={sound.id}
+              aria-label={`${sound.name} volume`}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Master Control -->
+    <div class="flex items-center justify-between pt-3 border-t border-hairline">
+      <button id="soundboard-mute" class="text-xs font-semibold text-ink-subtle hover:text-ink transition cursor-pointer flex items-center gap-1.5" aria-label="Mute all sounds">
+        <svg id="mute-icon" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <span id="mute-text">Mute All</span>
+      </button>
+      <button id="soundboard-stop" class="text-xs font-semibold text-ink-subtle hover:text-ink transition cursor-pointer">Stop All</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--color-primary); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--color-primary); cursor: pointer; border: none;
+  }
+</style>
+
+<script>
+  const widget = document.getElementById("soundboard-widget");
+  const minimizeBtn = widget?.querySelector(".minimize-btn");
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    widget?.classList.toggle("is-minimized");
+  });
+
+  const soundSliders = document.querySelectorAll(".sound-slider") as NodeListOf<HTMLInputElement>;
+  const toggleBtns   = document.querySelectorAll(".sound-toggle-btn") as NodeListOf<HTMLButtonElement>;
+  const muteBtn  = document.getElementById("soundboard-mute");
+  const muteText = document.getElementById("mute-text");
+  const muteIcon = document.getElementById("mute-icon");
+  const stopBtn  = document.getElementById("soundboard-stop");
+
+  let isMuted = false;
+  const audioStates: Record<string, { audio: HTMLAudioElement; isPlaying: boolean; volume: number }> = {};
+
+  soundSliders.forEach(slider => {
+    const id = slider.getAttribute("data-sound-id") || "";
+    const audio = document.getElementById(`audio-${id}`) as HTMLAudioElement;
+    if (audio) {
+      audio.volume = 0;
+      audioStates[id] = { audio, isPlaying: false, volume: 0 };
+    }
+  });
+
+  soundSliders.forEach(slider => {
+    slider.addEventListener("input", (e) => {
+      const id = slider.getAttribute("data-sound-id") || "";
+      const val = parseInt((e.target as HTMLInputElement).value);
+      updateSound(id, val);
+    });
+  });
+
+  toggleBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-sound-id") || "";
+      const state = audioStates[id];
+      if (state) updateSound(id, state.isPlaying ? 0 : 50);
+    });
+  });
+
+  function updateSound(soundId: string, volume: number) {
+    const state = audioStates[soundId];
+    if (!state) return;
+    state.volume = volume / 100;
+    const slider = widget?.querySelector(`.sound-slider[data-sound-id="${soundId}"]`) as HTMLInputElement;
+    if (slider) slider.value = volume.toString();
+    const label = widget?.querySelector(`[data-sound-id="${soundId}"] .sound-value-label`);
+    if (label) label.textContent = `${volume}%`;
+    const btn = widget?.querySelector(`.sound-toggle-btn[data-sound-id="${soundId}"]`) as HTMLButtonElement;
+    if (volume > 0) {
+      state.isPlaying = true;
+      btn?.classList.add("bg-primary/20", "border", "border-primary/50");
+      if (!isMuted) {
+        state.audio.volume = state.volume;
+        if (state.audio.paused) state.audio.play().catch(() => {});
+      }
+    } else {
+      state.isPlaying = false;
+      btn?.classList.remove("bg-primary/20", "border", "border-primary/50");
+      state.audio.volume = 0;
+      state.audio.pause();
+    }
+  }
+
+  function stopAllAndApply(presets: Record<string, number>) {
+    Object.keys(audioStates).forEach(id => updateSound(id, 0));
+    Object.keys(presets).forEach(id => updateSound(id, presets[id]));
+  }
+
+  muteBtn?.addEventListener("click", () => {
+    isMuted = !isMuted;
+    Object.keys(audioStates).forEach(id => {
+      if (isMuted) { audioStates[id].audio.volume = 0; }
+      else if (audioStates[id].isPlaying) {
+        audioStates[id].audio.volume = audioStates[id].volume;
+        audioStates[id].audio.play().catch(() => {});
+      }
+    });
+    if (muteText) muteText.textContent = isMuted ? "Unmute" : "Mute All";
+    if (muteIcon) {
+      muteIcon.innerHTML = isMuted
+        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />`
+        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />`;
+    }
+  });
+
+  stopBtn?.addEventListener("click", () => Object.keys(audioStates).forEach(id => updateSound(id, 0)));
+
+  document.getElementById("preset-study")?.addEventListener("click", () => stopAllAndApply({ lofi: 40, keyboard: 50 }));
+  document.getElementById("preset-rain")?.addEventListener("click", () => stopAllAndApply({ rain: 60, lofi: 20 }));
+  document.getElementById("preset-cafe")?.addEventListener("click", () => stopAllAndApply({ cafe: 60, keyboard: 20, lofi: 10 }));
+  document.getElementById("preset-reset")?.addEventListener("click", () => Object.keys(audioStates).forEach(id => updateSound(id, 0)));
+
+  document.addEventListener("change-space", (e: any) => {
+    const presets = e.detail.presets;
+    if (presets) stopAllAndApply(presets);
+  });
+</script>

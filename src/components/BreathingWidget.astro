@@ -1,0 +1,199 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/BreathingWidget.astro
+---
+
+<div
+  id="breathing-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="breathing"
+  data-default-x="420"
+  data-default-y="480"
+  style="width: 300px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-4 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink-subtle">
+      <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <circle cx="12" cy="12" r="5" stroke-width="2"/>
+      </svg>
+      <span class="text-xs font-semibold uppercase tracking-wider font-sans">Breathe</span>
+    </div>
+    <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize breathing widget">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="widget-body px-5 pb-5 pt-4 flex flex-col items-center">
+    <!-- Animated breathing circle -->
+    <div class="relative flex items-center justify-center my-3" style="width:140px;height:140px;">
+      <!-- Outer ambient ring -->
+      <div id="breath-ring-outer" class="absolute rounded-full border border-primary/15 transition-all" style="width:130px;height:130px;"></div>
+      <!-- Mid ring -->
+      <div id="breath-ring-mid" class="absolute rounded-full border border-primary/25 transition-all" style="width:110px;height:110px;"></div>
+      <!-- Main breathing orb -->
+      <div
+        id="breath-circle"
+        class="breath-circle relative rounded-full bg-gradient-to-br from-primary/60 via-primary/40 to-brand-secure/30 flex items-center justify-center transition-all"
+        style="width:64px;height:64px;"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <span id="breath-icon" class="text-xl select-none">🌬️</span>
+      </div>
+    </div>
+
+    <!-- Phase label + countdown -->
+    <div class="flex flex-col items-center mb-5">
+      <span id="breath-phase" class="text-sm font-semibold text-ink tracking-wide mb-1">Ready</span>
+      <span id="breath-countdown" class="font-mono text-2xl font-bold text-ink-muted">—</span>
+    </div>
+
+    <!-- Duration config -->
+    <div class="w-full grid grid-cols-3 gap-2 mb-5" id="breath-controls">
+      <div class="flex flex-col items-center gap-1">
+        <label for="inhale-dur" class="text-[10px] font-semibold text-ink-subtle uppercase tracking-wide">Inhale</label>
+        <input id="inhale-dur" type="number" min="1" max="15" value="4"
+          class="w-full text-center text-xs font-mono bg-surface-2/60 border border-hairline focus:border-primary-focus focus:outline-none rounded-md py-1 text-ink transition" aria-label="Inhale duration in seconds"
+        />
+        <span class="text-[9px] text-ink-subtle">sec</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <label for="hold-dur" class="text-[10px] font-semibold text-ink-subtle uppercase tracking-wide">Hold</label>
+        <input id="hold-dur" type="number" min="0" max="15" value="4"
+          class="w-full text-center text-xs font-mono bg-surface-2/60 border border-hairline focus:border-primary-focus focus:outline-none rounded-md py-1 text-ink transition" aria-label="Hold duration in seconds"
+        />
+        <span class="text-[9px] text-ink-subtle">sec</span>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <label for="exhale-dur" class="text-[10px] font-semibold text-ink-subtle uppercase tracking-wide">Exhale</label>
+        <input id="exhale-dur" type="number" min="1" max="15" value="6"
+          class="w-full text-center text-xs font-mono bg-surface-2/60 border border-hairline focus:border-primary-focus focus:outline-none rounded-md py-1 text-ink transition" aria-label="Exhale duration in seconds"
+        />
+        <span class="text-[9px] text-ink-subtle">sec</span>
+      </div>
+    </div>
+
+    <!-- Start/stop -->
+    <button id="breath-start" class="w-full bg-primary hover:bg-primary-hover active:bg-primary-focus text-white font-semibold text-sm py-2.5 rounded-lg transition cursor-pointer">
+      Start Breathing
+    </button>
+  </div>
+</div>
+
+<script>
+  const widget      = document.getElementById("breathing-widget");
+  const minimizeBtn = widget?.querySelector(".minimize-btn");
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    widget?.classList.toggle("is-minimized");
+  });
+
+  const circle       = document.getElementById("breath-circle") as HTMLElement;
+  const ringOuter    = document.getElementById("breath-ring-outer") as HTMLElement;
+  const ringMid      = document.getElementById("breath-ring-mid") as HTMLElement;
+  const phaseLabel   = document.getElementById("breath-phase") as HTMLElement;
+  const countdownEl  = document.getElementById("breath-countdown") as HTMLElement;
+  const iconEl       = document.getElementById("breath-icon") as HTMLElement;
+  const startBtn     = document.getElementById("breath-start") as HTMLButtonElement;
+  const inhaleInput  = document.getElementById("inhale-dur") as HTMLInputElement;
+  const holdInput    = document.getElementById("hold-dur") as HTMLInputElement;
+  const exhaleInput  = document.getElementById("exhale-dur") as HTMLInputElement;
+
+  let breathTimer: ReturnType<typeof setTimeout> | null = null;
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+  let isRunning = false;
+
+  function playChime(freq = 440, dur = 0.6) {
+    try {
+      const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      gain.gain.setValueAtTime(0, ac.currentTime);
+      gain.gain.linearRampToValueAtTime(0.12, ac.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.start(); osc.stop(ac.currentTime + dur);
+    } catch {}
+  }
+
+  function setPhase(name: string, size: number, color: string, icon: string, ringSize: number, ringMidSize: number) {
+    if (phaseLabel) phaseLabel.textContent = name;
+    if (iconEl) iconEl.textContent = icon;
+    if (circle) {
+      circle.style.width = `${size}px`;
+      circle.style.height = `${size}px`;
+      circle.style.background = color;
+    }
+    if (ringOuter) { ringOuter.style.width = `${ringSize}px`; ringOuter.style.height = `${ringSize}px`; }
+    if (ringMid)   { ringMid.style.width = `${ringMidSize}px`; ringMid.style.height = `${ringMidSize}px`; }
+  }
+
+  function startCountdown(seconds: number, label: string, icon: string, size: number, bg: string, ro: number, rm: number) {
+    let remaining = seconds;
+    setPhase(label, size, bg, icon, ro, rm);
+    if (countdownEl) countdownEl.textContent = remaining.toString();
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      remaining--;
+      if (countdownEl) countdownEl.textContent = remaining > 0 ? remaining.toString() : "—";
+      if (remaining <= 0 && countdownTimer) clearInterval(countdownTimer);
+    }, 1000);
+  }
+
+  function breathCycle() {
+    if (!isRunning) return;
+    const inhale  = parseInt(inhaleInput?.value  || "4") * 1000;
+    const hold    = parseInt(holdInput?.value    || "4") * 1000;
+    const exhale  = parseInt(exhaleInput?.value  || "6") * 1000;
+
+    playChime(523.25, 0.5);
+    startCountdown(inhale / 1000, "Inhale…",  "🌬️", 108, "linear-gradient(135deg,rgba(94,106,210,0.7),rgba(130,143,255,0.5))", 134, 112);
+    circle.style.transition = `width ${inhale}ms ease-in-out, height ${inhale}ms ease-in-out, background ${inhale}ms ease`;
+
+    breathTimer = setTimeout(() => {
+      if (!isRunning) return;
+      if (hold > 0) {
+        playChime(440, 0.3);
+        startCountdown(hold / 1000, "Hold…", "✨", 108, "linear-gradient(135deg,rgba(130,143,255,0.6),rgba(94,106,210,0.5))", 128, 106);
+        circle.style.transition = `width ${hold}ms ease-in-out, height ${hold}ms ease-in-out, background ${hold}ms ease`;
+      }
+
+      breathTimer = setTimeout(() => {
+        if (!isRunning) return;
+        playChime(392, 0.6);
+        startCountdown(exhale / 1000, "Exhale…", "😮‍💨", 64, "linear-gradient(135deg,rgba(94,106,210,0.4),rgba(122,127,173,0.3))", 98, 80);
+        circle.style.transition = `width ${exhale}ms ease-in-out, height ${exhale}ms ease-in-out, background ${exhale}ms ease`;
+
+        breathTimer = setTimeout(() => {
+          if (isRunning) breathCycle();
+        }, exhale);
+      }, hold > 0 ? hold : 0);
+    }, inhale);
+  }
+
+  function stopBreathing() {
+    isRunning = false;
+    if (breathTimer) { clearTimeout(breathTimer); breathTimer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    setPhase("Ready", 64, "linear-gradient(135deg,rgba(94,106,210,0.6),rgba(94,106,210,0.4))", "🌬️", 130, 110);
+    circle.style.transition = "width 0.6s ease, height 0.6s ease, background 0.6s ease";
+    if (countdownEl) countdownEl.textContent = "—";
+    if (startBtn) startBtn.textContent = "Start Breathing";
+    const config = document.getElementById("breath-controls");
+    inhaleInput.disabled = false; holdInput.disabled = false; exhaleInput.disabled = false;
+  }
+
+  startBtn?.addEventListener("click", () => {
+    if (isRunning) { stopBreathing(); return; }
+    isRunning = true;
+    startBtn.textContent = "Stop";
+    inhaleInput.disabled = true; holdInput.disabled = true; exhaleInput.disabled = true;
+    breathCycle();
+  });
+</script>

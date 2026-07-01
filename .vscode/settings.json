@@ -1,0 +1,17 @@
+{
+  // Tailwind CSS v4 uses custom at-rules like @theme, @utility, @variant.
+  // The built-in CSS language server doesn't know about them, so we silence
+  // those false-positive "Unknown at rule" warnings here.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+
+  // Use the Tailwind CSS IntelliSense extension for proper v4 support
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+
+  // Astro file associations
+  "files.associations": {
+    "*.astro": "astro"
+  }
+}

@@ -1,0 +1,453 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #5e6ad2;
+  --color-primary-hover: #828fff;
+  --color-primary-focus: #5e69d1;
+  --color-ink: #f7f8f8;
+  --color-ink-muted: #d0d6e0;
+  --color-ink-subtle: #8a8f98;
+  --color-ink-tertiary: #62666d;
+  --color-canvas: #010102;
+  --color-surface-1: #0f1011;
+  --color-surface-2: #141516;
+  --color-surface-3: #18191a;
+  --color-surface-4: #191a1b;
+  --color-hairline: #23252a;
+  --color-hairline-strong: #34343a;
+  --color-hairline-tertiary: #3e3e44;
+  --color-brand-secure: #7a7fad;
+  --color-semantic-success: #27a644;
+
+  --font-sans: "Inter", -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 24px;
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+
+  /* Spring animation easing */
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+/* ─── Custom scrollbars ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline-strong);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-tertiary); }
+
+/* ─── Glassmorphism base ────────────────────────────────────── */
+.glass {
+  background-color: rgba(15, 16, 17, 0.82);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--color-hairline);
+  box-shadow:
+    0 4px 32px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.3) inset;
+}
+
+/* ─── Top-edge highlight ────────────────────────────────────── */
+.edge-highlight { position: relative; }
+.edge-highlight::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ─── Base body ─────────────────────────────────────────────── */
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WIDGET ISLAND SYSTEM — Premium floating window experience
+   ═══════════════════════════════════════════════════════════════
+   All islands are anchored at position: absolute; top: 0; left: 0
+   and moved EXCLUSIVELY via transform: translate3d(x, y, 0).
+   No top/left changes after initialization — zero layout reflow.
+   ═══════════════════════════════════════════════════════════════ */
+
+.widget-island {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* GPU composited layer — promoted to own compositor layer */
+  will-change: transform;
+  transform-origin: top left;
+  /* Default transitions for non-drag interactions */
+  transition:
+    box-shadow 0.25s var(--ease-out-quart),
+    opacity 0.22s ease;
+  isolation: isolate;
+  /* Prevent sub-pixel rendering artifacts */
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Opening animation ──────────────────────────────────────── */
+@keyframes island-open {
+  0% {
+    opacity: 0;
+    transform: var(--island-pos, translate3d(0, 0, 0)) scale(0.92) translateY(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: var(--island-pos, translate3d(0, 0, 0)) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: var(--island-pos, translate3d(0, 0, 0)) scale(1);
+  }
+}
+
+.widget-island.is-opening {
+  animation: island-open 0.38s var(--ease-spring) forwards;
+}
+
+/* ── Dragging state ─────────────────────────────────────────── */
+.widget-island.is-dragging {
+  /* NO transition during drag — instant cursor follow at 60fps */
+  transition: box-shadow 0.15s ease !important;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.75),
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--color-hairline-strong),
+    0 0 0 1px rgba(94, 106, 210, 0.15);
+  cursor: grabbing !important;
+  z-index: 9999 !important;
+  /* Slight scale for "picked up" feel */
+  scale: 1.015;
+}
+
+/* ── Active / focused island ────────────────────────────────── */
+.widget-island.is-active {
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 1px var(--color-hairline-strong),
+    0 0 0 1px rgba(94, 106, 210, 0.12);
+}
+
+/* Focus ring glow on active island */
+.widget-island.is-active::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgba(94, 106, 210, 0.28);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* ── Hidden state (dock toggle off) ────────────────────────────
+   Uses a CSS custom property so scale(0.96) doesn't overwrite
+   the position transform set by JS.                            */
+.widget-island.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  /* Scale is applied via scale property, separate from the
+     translate3d position transform — no conflict */
+  scale: 0.94;
+  transition: opacity 0.22s ease, scale 0.22s var(--ease-in-quart);
+}
+
+/* ── Minimized state ────────────────────────────────────────── */
+.widget-body {
+  overflow: hidden;
+  transition:
+    max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease,
+    padding-top 0.3s ease,
+    padding-bottom 0.3s ease;
+  max-height: 800px;
+  opacity: 1;
+}
+
+.widget-island.is-minimized .widget-body {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* ─── Widget drag handle ────────────────────────────────────── */
+.widget-handle {
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.widget-handle:hover {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.widget-handle:active {
+  cursor: grabbing;
+}
+
+/* ── Snap guide lines (shown during drag near edges) ─────────── */
+.snap-guide {
+  position: fixed;
+  z-index: 9998;
+  pointer-events: none;
+  background: rgba(94, 106, 210, 0.4);
+  transition: opacity 0.12s ease;
+}
+.snap-guide.horizontal { left: 0; right: 0; height: 1px; }
+.snap-guide.vertical   { top: 0; bottom: 0; width: 1px; }
+
+/* ─── Dock sidebar ──────────────────────────────────────────── */
+#app-dock-container {
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  transition: opacity 0.3s ease, transform 0.3s var(--ease-spring);
+}
+
+#app-dock-container.dock-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(-8px);
+}
+
+/* Dock icon hover — magnetic expansion effect */
+.dock-btn,
+.dock-widget-btn {
+  transition: transform 0.2s var(--ease-spring);
+}
+.dock-btn:hover,
+.dock-widget-btn:hover {
+  transform: scale(1.08);
+}
+.dock-btn:active,
+.dock-widget-btn:active {
+  transform: scale(0.96);
+}
+
+/* Dock icon inner ring hover glow */
+.dock-btn .w-9,
+.dock-widget-btn .btn-ring {
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+.dock-widget-btn:hover .btn-ring {
+  box-shadow: 0 0 12px rgba(94, 106, 210, 0.25);
+}
+
+/* ─── Mobile: bottom dock ───────────────────────────────────── */
+@media (max-width: 768px) {
+  #app-dock-container {
+    left: 50%;
+    top: auto;
+    bottom: 16px;
+    transform: translateX(-50%);
+  }
+
+  #app-dock-container.dock-hidden {
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  #app-dock-container .dock-inner {
+    flex-direction: row !important;
+  }
+
+  .widget-island {
+    top: auto !important;
+    left: auto !important;
+    position: relative !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  #workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    overflow-y: auto;
+    padding-bottom: 120px;
+  }
+}
+
+/* ─── Global drag state ─────────────────────────────────────── */
+body.is-dragging {
+  user-select: none;
+  cursor: grabbing !important;
+}
+
+/* Disable pointer events on video iframe during drag to prevent it
+   from swallowing pointer events and causing the "escape" bug */
+body.is-dragging #bg-player {
+  pointer-events: none !important;
+}
+
+/* ─── Focus mode ────────────────────────────────────────────── */
+.focus-mode #app-header,
+.focus-mode #app-dock-container {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* Workspace stays visible in focus mode — widgets are the focus */
+
+/* ─── Video loading overlay ─────────────────────────────────── */
+#video-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center,
+    rgba(30, 32, 48, 0.8) 0%,
+    rgba(1, 1, 2, 0.95) 70%
+  );
+  transition: opacity 0.6s ease;
+}
+
+#video-loading-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes video-spinner {
+  to { transform: rotate(360deg); }
+}
+.video-spinner {
+  width: 32px; height: 32px;
+  border: 2px solid rgba(94, 106, 210, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: video-spinner 0.8s linear infinite;
+}
+
+/* ─── Click-to-start overlay ────────────────────────────────── */
+#video-start-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(1, 1, 2, 0.72);
+  backdrop-filter: blur(12px);
+  transition: opacity 0.5s ease;
+  cursor: pointer;
+}
+
+#video-start-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Animated gradient background fallback */
+@keyframes bg-gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-bg-fallback {
+  background: linear-gradient(
+    135deg,
+    #010102 0%,
+    #0d0f1a 20%,
+    #0a0d18 40%,
+    #050710 60%,
+    #0c0e1c 80%,
+    #010102 100%
+  );
+  background-size: 400% 400%;
+  animation: bg-gradient-shift 12s ease infinite;
+}
+
+/* ─── Breathing keyframes ───────────────────────────────────── */
+@keyframes breath-glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px 6px rgba(94, 106, 210, 0.3); }
+  50%       { box-shadow: 0 0 40px 14px rgba(130, 143, 255, 0.5); }
+}
+
+.breathing-hold .breath-circle {
+  animation: breath-glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Stats heatmap grid ────────────────────────────────────── */
+.heatmap-cell {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-hairline);
+  transition: background 0.2s ease;
+}
+.heatmap-cell[data-level="1"] { background: rgba(94, 106, 210, 0.25); }
+.heatmap-cell[data-level="2"] { background: rgba(94, 106, 210, 0.45); }
+.heatmap-cell[data-level="3"] { background: rgba(94, 106, 210, 0.65); }
+.heatmap-cell[data-level="4"] { background: rgba(94, 106, 210, 0.85); }
+.heatmap-cell[data-level="5"] { background: rgba(130, 143, 255, 1); }
+
+/* ─── Achievement badge ─────────────────────────────────────── */
+.achievement-badge {
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s ease;
+}
+.achievement-badge:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+}
+.achievement-badge.locked {
+  filter: grayscale(1) brightness(0.4);
+}
+
+/* ─── Background library card ───────────────────────────────── */
+.bg-library-card {
+  transition: transform 0.2s var(--ease-spring), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.bg-library-card:hover {
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-color: var(--color-hairline-strong);
+}
+.bg-library-card.is-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(94, 106, 210, 0.3), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ─── Drawer tabs ───────────────────────────────────────────── */
+.drawer-tab {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+/* ─── Stats number counter animation ───────────────────────── */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stat-value-animated {
+  animation: count-up 0.4s ease forwards;
+}

@@ -1,0 +1,1000 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/pages/index.astro
+import Layout from '../layouts/Layout.astro';
+import SpacesDrawer from '../components/SpacesDrawer.astro';
+import TimerWidget from '../components/TimerWidget.astro';
+import SoundboardWidget from '../components/SoundboardWidget.astro';
+import TasksWidget from '../components/TasksWidget.astro';
+import NotesWidget from '../components/NotesWidget.astro';
+import BreathingWidget from '../components/BreathingWidget.astro';
+import StatsWidget from '../components/StatsWidget.astro';
+import LoginModal from '../components/LoginModal.astro';
+---
+
+<Layout>
+  <!-- ══════════════════════════════════════════════════════════
+       BACKGROUND LAYER — z-index 0
+       Animated CSS gradient shown immediately, YouTube loads
+       on first user gesture to satisfy autoplay policy.
+       ════════════════════════════════════════════════════════ -->
+  <div id="bg-wrapper" class="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none animated-bg-fallback">
+
+    <!-- Overlay vignette & blur -->
+    <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/75 z-10 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-black/10 z-10 pointer-events-none"></div>
+
+    <!-- Video loading spinner (shown while iframe loads) -->
+    <div id="video-loading-overlay" class="hidden">
+      <div class="flex flex-col items-center gap-3">
+        <div class="video-spinner"></div>
+        <span class="text-xs text-ink-subtle font-sans">Loading space…</span>
+      </div>
+    </div>
+
+    <!-- Click-to-start overlay — satisfies browser autoplay policy -->
+    <div id="video-start-overlay">
+      <div class="flex flex-col items-center gap-4 text-center px-8">
+        <div class="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
+          <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-sans font-semibold text-ink text-base tracking-tight">Click to start your study space</p>
+          <p class="text-xs text-ink-subtle mt-1 font-sans">Background video + ambient sounds will play</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- YouTube Background Iframe (injected dynamically after gesture) -->
+    <div
+      id="bg-player-wrap"
+      class="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2 scale-[1.06]"
+      aria-hidden="true"
+    >
+      <!-- iframe injected by JS after user gesture -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FOREGROUND UI LAYER — z-index 20
+       ════════════════════════════════════════════════════════ -->
+  <div class="relative w-full h-full flex flex-col justify-between z-20 pointer-events-auto overflow-hidden">
+
+    <!-- ── Top Header ─────────────────────────────────────── -->
+    <header id="app-header" class="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-gradient-to-b from-black/45 to-transparent transition-opacity duration-500 shrink-0">
+      <!-- Logo -->
+      <h1 class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-primary shadow-sm shadow-primary/60 animate-pulse" aria-hidden="true"></span>
+        <span class="font-sans font-bold tracking-tight text-ink text-sm select-none">
+          AESTHETIC <span class="text-primary-hover font-medium">STUDY</span>
+        </span>
+      </h1>
+
+      <!-- Current Space -->
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[11px] font-medium text-ink-muted">
+        <span id="space-live-dot" class="w-1.5 h-1.5 rounded-full bg-surface-3" aria-hidden="true"></span>
+        <span>Space: </span>
+        <span id="current-space-title" class="text-ink font-semibold">—</span>
+      </div>
+
+      <!-- Clock, Cloud Sync, & Options -->
+      <div class="flex items-center gap-3">
+        <!-- Cloud Sync status -->
+        <div id="cloud-sync-indicator" class="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-sans font-medium text-ink-subtle select-none">
+          <svg class="w-3.5 h-3.5 text-ink-subtle shrink-0" id="cloud-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+          </svg>
+          <span id="cloud-sync-text">Local Only</span>
+        </div>
+
+        <span id="digital-clock" class="font-mono text-xs text-ink-muted tracking-widest bg-black/20 px-2.5 py-1 rounded-md border border-white/5">00:00:00</span>
+        
+        <button id="header-focus-toggle" class="text-xs font-semibold text-ink-subtle hover:text-ink cursor-pointer border border-hairline/80 px-2.5 py-1 rounded bg-surface-1/40 hover:bg-surface-2 transition">
+          Focus Mode
+        </button>
+
+        <!-- User Menu / Login Dropdown -->
+        <div class="relative inline-block text-left" id="user-menu-container">
+          <!-- Signed Out Trigger -->
+          <button id="btn-login-trigger" class="text-xs font-semibold text-white bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg border border-primary-focus/45 shadow-sm shadow-primary/10 transition cursor-pointer select-none">
+            Sign In
+          </button>
+
+          <!-- Signed In User Menu (Hidden initially) -->
+          <div id="user-profile-badge" class="hidden flex items-center gap-2 px-2 py-0.5 bg-white/5 border border-white/5 rounded-full hover:bg-white/10 transition cursor-pointer select-none">
+            <img id="user-avatar" class="w-5 h-5 rounded-full object-cover border border-white/10 bg-surface-3" src="" alt="avatar" />
+            <span id="user-name" class="text-xs font-semibold text-ink-muted">Guest</span>
+          </div>
+
+          <!-- Dropdown Menu -->
+          <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-48 rounded-xl shadow-xl glass border border-hairline/80 py-1.5 hidden flex-col z-50 translate-y-1 transition duration-200">
+            <div class="px-3.5 py-2 border-b border-hairline shrink-0">
+              <p class="text-[10px] font-bold text-ink-subtle uppercase tracking-wider">Account</p>
+              <p id="dropdown-user-email" class="text-xs text-ink truncate font-medium mt-0.5">user@example.com</p>
+            </div>
+            <button id="btn-sign-out" class="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-white/[0.03] transition cursor-pointer flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Draggable Widgets Workspace ────────────────────── -->
+    <main id="workspace" class="flex-1 w-full relative overflow-hidden" role="main" aria-label="Widget workspace">
+      <TimerWidget />
+      <SoundboardWidget />
+      <TasksWidget />
+      <NotesWidget />
+      <BreathingWidget />
+      <StatsWidget />
+      <SpacesDrawer />
+      <LoginModal />
+    </main>
+
+    <!-- ── Left Sidebar Dock ──────────────────────────────── -->
+    <aside id="app-dock-container" aria-label="Widget dock">
+      <div class="dock-inner glass rounded-2xl py-4 px-2.5 flex flex-col items-center gap-3.5">
+
+        <!-- Spaces Explorer -->
+        <button id="dock-btn-explore" class="dock-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Explore spaces">
+          <div class="w-9 h-9 rounded-full bg-surface-2/80 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight">Spaces</span>
+        </button>
+
+        <div class="w-6 h-px bg-hairline rounded-full my-0.5" role="separator"></div>
+
+        <!-- Timer -->
+        <button data-widget-id="timer-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle timer" aria-pressed="true">
+          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Timer</span>
+        </button>
+
+        <!-- Stats -->
+        <button data-widget-id="stats-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle study statistics" aria-pressed="false">
+          <div class="btn-ring w-9 h-9 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight">Stats</span>
+        </button>
+
+        <!-- Sounds -->
+        <button data-widget-id="soundboard-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle ambient sounds" aria-pressed="true">
+          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Sounds</span>
+        </button>
+
+        <!-- Tasks -->
+        <button data-widget-id="tasks-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle tasks" aria-pressed="true">
+          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Tasks</span>
+        </button>
+
+        <!-- Notes -->
+        <button data-widget-id="notes-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle notes" aria-pressed="true">
+          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Notes</span>
+        </button>
+
+        <!-- Breathing -->
+        <button data-widget-id="breathing-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle breathing guide" aria-pressed="false">
+          <div class="btn-ring w-9 h-9 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4.5 h-4.5 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke-width="1.5" stroke-dasharray="3 3"/>
+              <circle cx="12" cy="12" r="5" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight">Breathe</span>
+        </button>
+
+        <div class="w-6 h-px bg-hairline rounded-full my-0.5" role="separator"></div>
+
+        <!-- Video Toggle -->
+        <button id="dock-btn-video-play" class="group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Play or pause background video">
+          <div class="w-9 h-9 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
+            <svg id="play-video-icon" class="w-4.5 h-4.5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight">Video</span>
+        </button>
+
+        <!-- Focus Mode -->
+        <button id="dock-btn-focus" class="group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle focus mode">
+          <div class="w-9 h-9 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
+            <svg class="w-4.5 h-4.5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          </div>
+          <span class="text-[10px] font-sans font-medium tracking-tight">Focus</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Exit Focus Overlay -->
+    <button id="exit-focus-btn" class="fixed bottom-6 right-6 z-50 glass hover:bg-surface-2 border border-hairline px-4 py-2 rounded-full text-xs font-semibold text-ink-muted hover:text-ink transition cursor-pointer hidden" aria-label="Exit focus mode">
+      Exit Focus Mode
+    </button>
+  </div>
+</Layout>
+
+<script>
+  // ═══════════════════════════════════════════════════════════════════
+  // WIDGET MANAGER — Precise transform-based drag system
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  // DRAG BUG FIX: The previous implementation attached pointermove/
+  // pointerup to the handle element. When the cursor moved faster
+  // than the widget could reposition, it would escape the handle
+  // bounding box and events would stop, causing snap/jump artifacts.
+  //
+  // FIX: Attach pointermove and pointerup to DOCUMENT, not the handle.
+  // Use setPointerCapture on the handle (still correct — capture routes
+  // all pointer events for that pointer ID to the handle regardless of
+  // where the cursor is). Store the cursor-to-widget-corner offset on
+  // mousedown and use it on every move: position = cursor - offset.
+  // This guarantees the widget stays exactly under the cursor.
+  //
+  // IFRAME FIX: Set pointer-events: none on the YouTube iframe during
+  // drag via body.is-dragging selector in CSS. Iframes steal pointer
+  // events and were a secondary cause of the chasing bug.
+  // ═══════════════════════════════════════════════════════════════════
+
+  const DOCK_WIDTH    = 88;  // left sidebar dock width + gap
+  const WIDGET_MARGIN = 16;
+  const STORAGE_KEY   = "widget-positions-v4";
+  const SNAP_THRESHOLD = 18; // px — edge snap zone
+  const GRID_SIZE      = 20; // px — grid snap when Alt/Option held
+
+  interface WidgetState {
+    x: number;
+    y: number;
+    visible: boolean;
+  }
+
+  const widgetStates: Record<string, WidgetState> = {};
+  let maxZ = 50;
+  // Currently active drag context
+  let activeDrag: {
+    el: HTMLElement;
+    offsetX: number;  // cursor.x - widget.x at drag start
+    offsetY: number;  // cursor.y - widget.y at drag start
+    isDragging: boolean;
+    startX: number;
+    startY: number;
+  } | null = null;
+
+  // ── Persist / restore ──────────────────────────────────────────
+  // Dynamically scope storage based on the active user profile
+  function getStorageKey(): string {
+    try {
+      const user = localStorage.getItem("sa_user_profile_v1");
+      if (user) {
+        const parsed = JSON.parse(user);
+        // Sync indicator only works for non-anonymous accounts
+        if (parsed.authProvider !== 'anonymous') {
+          return `widget-positions-v4_${parsed.id}`;
+        }
+      }
+    } catch {}
+    return STORAGE_KEY;
+  }
+
+  function loadPositions(): Record<string, WidgetState> {
+    try {
+      const stored = localStorage.getItem(getStorageKey());
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {};
+  }
+
+  function savePositions() {
+    try {
+      localStorage.setItem(getStorageKey(), JSON.stringify(widgetStates));
+      triggerCloudSync();
+    } catch {}
+  }
+
+  // Cloud Saving Simulation Indicator
+  let syncTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  function triggerCloudSync() {
+    const userProfileRaw = localStorage.getItem("sa_user_profile_v1");
+    if (!userProfileRaw) {
+      updateCloudSyncUI("local");
+      return;
+    }
+    const user = JSON.parse(userProfileRaw);
+    if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
+      updateCloudSyncUI("local");
+      return;
+    }
+
+    updateCloudSyncUI("syncing");
+
+    if (syncTimeoutId) clearTimeout(syncTimeoutId);
+    syncTimeoutId = setTimeout(() => {
+      updateCloudSyncUI("saved");
+    }, 1200);
+  }
+
+  function updateCloudSyncUI(state: "local" | "syncing" | "saved") {
+    const indicator = document.getElementById("cloud-sync-indicator");
+    const icon      = document.getElementById("cloud-icon");
+    const text      = document.getElementById("cloud-sync-text");
+    if (!indicator || !text || !icon) return;
+
+    if (state === "local") {
+      indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-sans font-medium text-ink-subtle select-none";
+      icon.className = "w-3.5 h-3.5 text-ink-subtle shrink-0";
+      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>`;
+      text.textContent = "Local Only";
+    } else if (state === "syncing") {
+      indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-[10px] font-sans font-medium text-primary select-none animate-pulse";
+      icon.className = "w-3.5 h-3.5 text-primary shrink-0";
+      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 12H19c0-.213.017-.422.05-.63M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>`;
+      text.textContent = "Syncing...";
+    } else if (state === "saved") {
+      indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-semantic-success/10 border border-semantic-success/20 rounded-full text-[10px] font-sans font-medium text-semantic-success select-none";
+      icon.className = "w-3.5 h-3.5 text-semantic-success shrink-0";
+      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>`;
+      text.textContent = "Saved to Cloud";
+    }
+  }
+
+  // ── Apply transform — ONLY way positions are set after init ────
+  function applyPosition(el: HTMLElement, x: number, y: number) {
+    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
+
+  // ── Viewport clamping ──────────────────────────────────────────
+  function clampPosition(x: number, y: number, el: HTMLElement): { x: number; y: number } {
+    const workspace = document.getElementById("workspace");
+    if (!workspace) return { x, y };
+    const vpW = workspace.clientWidth;
+    const vpH = workspace.clientHeight;
+    const w   = el.offsetWidth  || 300;
+    const h   = Math.min(el.scrollHeight || 400, vpH - WIDGET_MARGIN * 2);
+    return {
+      x: Math.max(DOCK_WIDTH + WIDGET_MARGIN, Math.min(vpW - w - WIDGET_MARGIN, x)),
+      y: Math.max(WIDGET_MARGIN, Math.min(vpH - 60, y)),
+    };
+  }
+
+  // ── Smart placement for newly-shown widgets ────────────────────
+  function findAvailablePosition(ww: number, wh: number, exclude?: string): { x: number; y: number } {
+    const workspace = document.getElementById("workspace");
+    if (!workspace) return { x: DOCK_WIDTH + WIDGET_MARGIN, y: WIDGET_MARGIN };
+    const vpW = workspace.clientWidth;
+    const vpH = workspace.clientHeight;
+    const step = 32;
+
+    for (let row = 0; row * step + wh < vpH - WIDGET_MARGIN; row++) {
+      for (let col = 0; col * step + ww < vpW - DOCK_WIDTH - WIDGET_MARGIN; col++) {
+        const candX = DOCK_WIDTH + WIDGET_MARGIN + col * step;
+        const candY = WIDGET_MARGIN + row * step;
+        let overlaps = false;
+        for (const [id, state] of Object.entries(widgetStates)) {
+          if (id === exclude || !state.visible) continue;
+          const other = document.getElementById(id);
+          if (!other) continue;
+          const ow = other.offsetWidth, oh = other.offsetHeight;
+          if (
+            candX < state.x + ow + WIDGET_MARGIN &&
+            candX + ww + WIDGET_MARGIN > state.x &&
+            candY < state.y + oh + WIDGET_MARGIN &&
+            candY + wh + WIDGET_MARGIN > state.y
+          ) { overlaps = true; break; }
+        }
+        if (!overlaps) return { x: candX, y: candY };
+      }
+    }
+    const openCount = Object.values(widgetStates).filter(s => s.visible).length;
+    return {
+      x: DOCK_WIDTH + WIDGET_MARGIN + openCount * 28,
+      y: WIDGET_MARGIN + openCount * 28,
+    };
+  }
+
+  // ── Bring to front ─────────────────────────────────────────────
+  function bringToFront(el: HTMLElement) {
+    maxZ++;
+    el.style.zIndex = maxZ.toString();
+    document.querySelectorAll<HTMLElement>(".widget-island").forEach(w => w.classList.remove("is-active"));
+    el.classList.add("is-active");
+  }
+
+  // ── Init all widgets ────────────────────────────────────────────
+  function initWidgets() {
+    const saved = loadPositions();
+    document.querySelectorAll<HTMLElement>(".widget-island").forEach(el => {
+      const id       = el.id;
+      const defaultX = parseInt(el.getAttribute("data-default-x") || "100");
+      const defaultY = parseInt(el.getAttribute("data-default-y") || "80");
+
+      const savedState = saved[id];
+      const state: WidgetState = {
+        x:       savedState?.x       ?? (DOCK_WIDTH + defaultX),
+        y:       savedState?.y       ?? defaultY,
+        visible: savedState?.visible !== undefined ? savedState.visible : (id !== "breathing-widget" && id !== "stats-widget"),
+      };
+      widgetStates[id] = state;
+
+      const { x, y } = clampPosition(state.x, state.y, el);
+      state.x = x; state.y = y;
+      applyPosition(el, x, y);
+
+      if (state.visible) {
+        el.classList.remove("is-hidden");
+      } else {
+        el.classList.add("is-hidden");
+      }
+    });
+    savePositions();
+    syncDockButtons();
+  }
+
+  // ── Sync Dock Buttons with Current Widget States ────────────────
+  function syncDockButtons() {
+    document.querySelectorAll<HTMLButtonElement>(".dock-widget-btn").forEach(btn => {
+      const targetId = btn.getAttribute("data-widget-id") || "";
+      const state    = widgetStates[targetId];
+      if (!state) return;
+
+      const ring  = btn.querySelector<HTMLElement>(".btn-ring");
+      const icon  = btn.querySelector<HTMLElement>(".btn-icon");
+      const label = btn.querySelector<HTMLElement>("span");
+      const visible = state.visible;
+
+      btn.setAttribute("aria-pressed", visible.toString());
+      if (visible) {
+        ring?.classList.add("bg-primary/20", "border-primary/40");
+        ring?.classList.remove("bg-surface-2/80", "border-hairline");
+        icon?.classList.add("text-primary-hover");
+        icon?.classList.remove("text-ink-muted");
+        if (label && label.className.includes("text-ink-subtle")) {
+          label.classList.replace("text-ink-subtle", "text-ink");
+        }
+      } else {
+        ring?.classList.remove("bg-primary/20", "border-primary/40");
+        ring?.classList.add("bg-surface-2/80", "border-hairline");
+        icon?.classList.remove("text-primary-hover");
+        icon?.classList.add("text-ink-muted");
+        if (label && label.className.includes("text-ink")) {
+          label.classList.replace("text-ink", "text-ink-subtle");
+        }
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // DRAG SYSTEM — Fixed implementation
+  // ══════════════════════════════════════════════════════════════
+  function makeDraggable(el: HTMLElement) {
+    const handle = el.querySelector<HTMLElement>(".widget-handle");
+    if (!handle) return;
+
+    handle.addEventListener("pointerdown", (e: PointerEvent) => {
+      // Ignore clicks on interactive elements inside the handle
+      if ((e.target as HTMLElement).closest("button, input, select, textarea")) return;
+      e.preventDefault();
+
+      bringToFront(el);
+
+      const state = widgetStates[el.id];
+      const currentX = state?.x ?? 0;
+      const currentY = state?.y ?? 0;
+
+      // ── KEY FIX: store the offset from cursor to widget origin ──
+      // On every subsequent move: widget position = cursor - this offset
+      // This makes the widget stay exactly where it was clicked.
+      activeDrag = {
+        el,
+        offsetX:    e.clientX - currentX,   // distance from cursor to widget left edge
+        offsetY:    e.clientY - currentY,   // distance from cursor to widget top edge
+        isDragging: false,
+        startX:     e.clientX,
+        startY:     e.clientY,
+      };
+
+      // Capture pointer — all future events route here regardless of position
+      handle.setPointerCapture(e.pointerId);
+      document.body.classList.add("is-dragging");
+    });
+
+    // ── Move handler on DOCUMENT (not handle) ──────────────────
+    // This is the critical fix: events fire even when cursor leaves
+    // the handle area during fast movement.
+    handle.addEventListener("pointermove", (e: PointerEvent) => {
+      if (!activeDrag || activeDrag.el !== el) return;
+
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+
+      // 4px dead zone before drag starts (allows click events)
+      if (!activeDrag.isDragging && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+
+      if (!activeDrag.isDragging) {
+        activeDrag.isDragging = true;
+        el.classList.add("is-dragging");
+        el.style.transition = "none"; // no transition during drag — instant 60fps follow
+      }
+
+      // ── PRECISE POSITION: cursor minus stored offset ───────────
+      let rawX = e.clientX - activeDrag.offsetX;
+      let rawY = e.clientY - activeDrag.offsetY;
+
+      // Alt/Option key = grid snap
+      if (e.altKey) {
+        rawX = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
+        rawY = Math.round(rawY / GRID_SIZE) * GRID_SIZE;
+      }
+
+      // Edge snap
+      const workspace = document.getElementById("workspace");
+      if (workspace) {
+        const vpW = workspace.clientWidth;
+        const vpH = workspace.clientHeight;
+        const w   = el.offsetWidth;
+
+        // Snap to left dock edge
+        if (rawX - (DOCK_WIDTH + WIDGET_MARGIN) < SNAP_THRESHOLD) {
+          rawX = DOCK_WIDTH + WIDGET_MARGIN;
+        }
+        // Snap to right edge
+        if (vpW - rawX - w < SNAP_THRESHOLD) {
+          rawX = vpW - w - WIDGET_MARGIN;
+        }
+        // Snap to top
+        if (rawY - WIDGET_MARGIN < SNAP_THRESHOLD) {
+          rawY = WIDGET_MARGIN;
+        }
+      }
+
+      const { x, y } = clampPosition(rawX, rawY, el);
+      applyPosition(el, x, y);
+    });
+
+    handle.addEventListener("pointerup", (e: PointerEvent) => {
+      if (!activeDrag || activeDrag.el !== el) return;
+
+      if (activeDrag.isDragging) {
+        // Restore smooth transitions
+        el.style.transition = "";
+        el.classList.remove("is-dragging");
+
+        // Save final position from current transform
+        const matrix = new DOMMatrix(getComputedStyle(el).transform);
+        const { x, y } = clampPosition(matrix.m41, matrix.m42, el);
+        const state = widgetStates[el.id];
+        if (state) {
+          state.x = x; state.y = y;
+          applyPosition(el, x, y);
+          savePositions();
+        }
+      }
+
+      document.body.classList.remove("is-dragging");
+      activeDrag = null;
+    });
+
+    handle.addEventListener("pointercancel", () => {
+      if (!activeDrag || activeDrag.el !== el) return;
+      el.style.transition = "";
+      el.classList.remove("is-dragging");
+      document.body.classList.remove("is-dragging");
+      activeDrag = null;
+    });
+
+    // Bring to front on any click of the widget body too
+    el.addEventListener("pointerdown", () => bringToFront(el));
+  }
+
+  // ── Dock toggle (show / hide widgets) ─────────────────────────
+  function setupDockToggles() {
+    document.querySelectorAll<HTMLButtonElement>(".dock-widget-btn").forEach(btn => {
+      const targetId = btn.getAttribute("data-widget-id") || "";
+      const widget   = document.getElementById(targetId) as HTMLElement | null;
+      if (!widget) return;
+
+      btn.addEventListener("click", () => {
+        const state = widgetStates[targetId];
+        if (!state) return;
+
+        if (state.visible) {
+          state.visible = false;
+          widget.classList.add("is-hidden");
+        } else {
+          state.visible = true;
+
+          // Smart placement if at default
+          const isDefault = state.x <= DOCK_WIDTH + 20 && state.y <= WIDGET_MARGIN + 5;
+          if (isDefault) {
+            const ww = widget.offsetWidth || 300;
+            const wh = widget.offsetHeight || 400;
+            const { x, y } = findAvailablePosition(ww, wh, targetId);
+            const { x: cx, y: cy } = clampPosition(x, y, widget);
+            state.x = cx; state.y = cy;
+          }
+
+          applyPosition(widget, state.x, state.y);
+          widget.classList.remove("is-hidden");
+
+          // Opening animation
+          widget.classList.add("is-opening");
+          setTimeout(() => widget.classList.remove("is-opening"), 400);
+
+          bringToFront(widget);
+        }
+        savePositions();
+        syncDockButtons();
+      });
+    });
+  }
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const drawer = document.getElementById("spaces-drawer");
+      if (drawer && !drawer.classList.contains("-translate-x-full")) {
+        drawer.classList.add("-translate-x-full");
+      }
+    }
+  });
+
+  // ── Digital clock ──────────────────────────────────────────────
+  const clockEl = document.getElementById("digital-clock");
+  function updateClock() {
+    const n   = new Date();
+    const pad = (v: number) => v.toString().padStart(2, "0");
+    if (clockEl) clockEl.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── Spaces drawer ──────────────────────────────────────────────
+  document.getElementById("dock-btn-explore")?.addEventListener("click", () => {
+    document.getElementById("spaces-drawer")?.classList.toggle("-translate-x-full");
+  });
+
+  // ── Focus mode ─────────────────────────────────────────────────
+  const exitFocusBtn = document.getElementById("exit-focus-btn");
+  function enterFocus() {
+    document.body.classList.add("focus-mode");
+    exitFocusBtn?.classList.remove("hidden");
+    document.getElementById("app-dock-container")?.classList.add("dock-hidden");
+  }
+  function exitFocus() {
+    document.body.classList.remove("focus-mode");
+    exitFocusBtn?.classList.add("hidden");
+    document.getElementById("app-dock-container")?.classList.remove("dock-hidden");
+  }
+  document.getElementById("header-focus-toggle")?.addEventListener("click", enterFocus);
+  document.getElementById("dock-btn-focus")?.addEventListener("click", enterFocus);
+  exitFocusBtn?.addEventListener("click", exitFocus);
+
+  // ════════════════════════════════════════════════════════════════
+  // VIDEO SYSTEM — Fixed autoplay + fallback
+  // ════════════════════════════════════════════════════════════════
+  // YouTube iframes with autoplay=1 are blocked by Chrome's autoplay
+  // policy unless the page has received a user gesture first.
+  // Fix: defer iframe injection until first click on the start overlay.
+  // Show an animated CSS gradient background as fallback during load.
+  // ════════════════════════════════════════════════════════════════
+
+  let currentVideoId = "hBGwt25cJRY"; // Default: Lo-Fi Cafe
+  let isVideoPlaying = false;
+  let playerIframe: HTMLIFrameElement | null = null;
+
+  const startOverlay   = document.getElementById("video-start-overlay");
+  const loadingOverlay = document.getElementById("video-loading-overlay");
+  const playerWrap     = document.getElementById("bg-player-wrap");
+  const spaceTitleEl   = document.getElementById("current-space-title");
+  const spaceLiveDot   = document.getElementById("space-live-dot");
+  const videoPlayBtn   = document.getElementById("dock-btn-video-play");
+  const playVideoIcon  = document.getElementById("play-video-icon");
+
+  const PAUSE_SVG = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
+  const PLAY_SVG  = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
+
+  function buildYouTubeUrl(videoId: string): string {
+    const origin = encodeURIComponent(window.location.origin);
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&showinfo=0&rel=0&iv_load_policy=3&playsinline=1&modestbranding=1&origin=${origin}`;
+  }
+
+  function injectPlayer(videoId: string) {
+    if (!playerWrap) return;
+
+    // Show loading state
+    loadingOverlay?.classList.remove("hidden");
+
+    // Remove any existing iframe
+    const existing = playerWrap.querySelector("iframe");
+    if (existing) existing.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id          = "bg-player";
+    iframe.src         = buildYouTubeUrl(videoId);
+    iframe.frameBorder = "0";
+    iframe.allow       = "autoplay; encrypted-media";
+    iframe.className   = "w-full h-full pointer-events-none select-none";
+    iframe.setAttribute("aria-hidden", "true");
+
+    iframe.addEventListener("load", () => {
+      // Hide loading overlay after iframe loads
+      setTimeout(() => {
+        loadingOverlay?.classList.add("hidden");
+      }, 800);
+    });
+
+    playerWrap.appendChild(iframe);
+    playerIframe = iframe;
+    isVideoPlaying = true;
+
+    if (spaceLiveDot) {
+      spaceLiveDot.classList.remove("bg-surface-3");
+      spaceLiveDot.classList.add("bg-semantic-success", "animate-ping");
+    }
+  }
+
+  function controlYT(action: string) {
+    if (!playerIframe) return;
+    try {
+      playerIframe.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func: action, args: [] }),
+        "*"
+      );
+    } catch {}
+  }
+
+  // Start overlay click — first user gesture satisfies autoplay policy
+  startOverlay?.addEventListener("click", () => {
+    startOverlay.classList.add("hidden");
+    if (spaceTitleEl) spaceTitleEl.textContent = "Lo-Fi Cafe Vibes";
+    injectPlayer(currentVideoId);
+    if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
+  });
+
+  // Video play/pause toggle
+  videoPlayBtn?.addEventListener("click", () => {
+    if (!playerIframe) {
+      // Player not yet started — trigger start
+      startOverlay?.classList.add("hidden");
+      injectPlayer(currentVideoId);
+      return;
+    }
+    isVideoPlaying = !isVideoPlaying;
+    controlYT(isVideoPlaying ? "playVideo" : "pauseVideo");
+    if (playVideoIcon) playVideoIcon.innerHTML = isVideoPlaying ? PAUSE_SVG : PLAY_SVG;
+  });
+
+  // Space change event (from SpacesDrawer)
+  document.addEventListener("change-space", (e: any) => {
+    const { videoId, title } = e.detail;
+    currentVideoId = videoId;
+
+    if (spaceTitleEl && title) spaceTitleEl.textContent = title;
+
+    if (playerIframe) {
+      // Player is running — switch video
+      injectPlayer(videoId);
+    } else {
+      // Player not yet started — update default and start if overlay is hidden
+      if (startOverlay?.classList.contains("hidden")) {
+        injectPlayer(videoId);
+      }
+    }
+
+    if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
+    isVideoPlaying = true;
+  });
+
+  // ── Background image handler (from static library) ─────────────
+  const bgWrapper = document.getElementById("bg-wrapper");
+
+  document.addEventListener("change-background", (e: any) => {
+    const { type, url, title, id } = e.detail;
+
+    if (type === "image") {
+      // Static image background — hide YouTube player, show image
+      if (playerIframe) {
+        playerIframe.style.display = "none";
+      }
+      if (bgWrapper) {
+        bgWrapper.style.backgroundImage = `url('${url}')`;
+        bgWrapper.style.backgroundSize  = "cover";
+        bgWrapper.style.backgroundPosition = "center";
+        bgWrapper.classList.remove("animated-bg-fallback");
+      }
+      if (spaceTitleEl) spaceTitleEl.textContent = title;
+      if (spaceLiveDot) {
+        spaceLiveDot.classList.remove("bg-semantic-success", "animate-ping");
+        spaceLiveDot.classList.add("bg-primary");
+      }
+      // Dismiss start overlay if present
+      startOverlay?.classList.add("hidden");
+    } else if (type === "video") {
+      // Custom uploaded video
+      if (bgWrapper) bgWrapper.style.backgroundImage = "";
+      if (playerWrap) {
+        const vid = document.createElement("video");
+        vid.src       = url;
+        vid.autoplay  = true;
+        vid.loop      = true;
+        vid.muted     = true;
+        vid.className = "w-full h-full object-cover pointer-events-none";
+        playerWrap.innerHTML = "";
+        playerWrap.appendChild(vid);
+      }
+      if (spaceTitleEl) spaceTitleEl.textContent = title;
+      startOverlay?.classList.add("hidden");
+    }
+
+    // Save preference
+    try {
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      prefs.selectedBackground     = id;
+      prefs.selectedBackgroundType = type;
+      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+    } catch {}
+  });
+
+  // ── Initialize UserStore on boot ────────────────────────────────
+  function initUserStore() {
+    try {
+      const existing = localStorage.getItem("sa_user_profile_v1");
+      if (!existing) {
+        const profile = {
+          id:           `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          name:         "Study Aesthetic User",
+          email:        "",
+          authProvider: "anonymous",
+          createdAt:    new Date().toISOString(),
+          lastActiveAt: new Date().toISOString(),
+        };
+        localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
+      } else {
+        const p = JSON.parse(existing);
+        p.lastActiveAt = new Date().toISOString();
+        localStorage.setItem("sa_user_profile_v1", JSON.stringify(p));
+      }
+
+      // Seed video DB if not present
+      if (!localStorage.getItem("sa_video_db_v1")) {
+        // The VideoDatabase.ts will seed on first getAllVideos() call
+        // Trigger a read via custom event so it initializes
+      }
+    } catch {}
+  }
+
+  // ── Authentication UI & State Handlers ──────────────────────────
+  const btnLoginTrigger = document.getElementById("btn-login-trigger");
+  const userProfileBadge = document.getElementById("user-profile-badge");
+  const userDropdownMenu = document.getElementById("user-dropdown-menu");
+  const userAvatar       = document.getElementById("user-avatar") as HTMLImageElement;
+  const userName         = document.getElementById("user-name");
+  const dropdownEmail    = document.getElementById("dropdown-user-email");
+  const btnSignOut       = document.getElementById("btn-sign-out");
+
+  function syncAuthUI() {
+    try {
+      const rawUser = localStorage.getItem("sa_user_profile_v1");
+      if (!rawUser) {
+        showSignedOutUI();
+        return;
+      }
+      const user = JSON.parse(rawUser);
+
+      // Anonymous accounts are treated as signed out for cloud sync/dropdown functions
+      if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
+        showSignedOutUI();
+      } else {
+        showSignedInUI(user);
+      }
+    } catch {
+      showSignedOutUI();
+    }
+  }
+
+  function showSignedOutUI() {
+    btnLoginTrigger?.classList.remove("hidden");
+    userProfileBadge?.classList.add("hidden");
+    userDropdownMenu?.classList.add("hidden");
+    updateCloudSyncUI("local");
+  }
+
+  function showSignedInUI(user: any) {
+    btnLoginTrigger?.classList.add("hidden");
+    userProfileBadge?.classList.remove("hidden");
+    if (userAvatar) userAvatar.src = user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.name}`;
+    if (userName) userName.textContent = user.name.split(' ')[0];
+    if (dropdownEmail) dropdownEmail.textContent = user.email || "guest@studyaesthetic.com";
+    updateCloudSyncUI("saved");
+  }
+
+  // Click login button to trigger modal open
+  btnLoginTrigger?.addEventListener("click", () => {
+    document.dispatchEvent(new CustomEvent("open-auth-modal"));
+  });
+
+  // Toggle user profile dropdown
+  userProfileBadge?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    userDropdownMenu?.classList.toggle("hidden");
+    userDropdownMenu?.classList.toggle("flex");
+  });
+
+  // Close dropdown on window click
+  window.addEventListener("click", () => {
+    userDropdownMenu?.classList.add("hidden");
+    userDropdownMenu?.classList.remove("flex");
+  });
+
+  // Sign out handler
+  btnSignOut?.addEventListener("click", () => {
+    // Revert user profile back to anonymous default
+    const anonProfile = {
+      id:           `user-anon-${Date.now()}`,
+      name: "Study Aesthetic User",
+      email:        "",
+      authProvider: "anonymous",
+      createdAt:    new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+    };
+    localStorage.setItem("sa_user_profile_v1", JSON.stringify(anonProfile));
+    
+    // Clear custom user state change
+    document.dispatchEvent(new CustomEvent("auth-state-changed", {
+      detail: { loggedIn: false }
+    }));
+  });
+
+  // Listen to auth state changes from LoginModal
+  document.addEventListener("auth-state-changed", (e: any) => {
+    syncAuthUI();
+    // Reload layouts for the new scoped user
+    initWidgets();
+    // Show a sync completed indicator
+    if (e.detail.loggedIn) {
+      triggerCloudSync();
+    }
+  });
+
+  // ── BOOT ───────────────────────────────────────────────────────
+  function boot() {
+    initUserStore();
+    syncAuthUI();
+    initWidgets();
+    document.querySelectorAll<HTMLElement>(".widget-island").forEach(makeDraggable);
+    setupDockToggles();
+  }
+
+  boot();
+</script>

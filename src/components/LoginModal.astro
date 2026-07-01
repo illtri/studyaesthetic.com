@@ -1,0 +1,251 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/LoginModal.astro
+---
+
+<div
+  id="auth-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="auth-modal-title"
+>
+  <!-- Card Container -->
+  <div class="glass w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-hairline/80 translate-y-4 transition-transform duration-300 ease-out" id="auth-modal-card">
+    
+    <!-- Tab Headers -->
+    <div class="flex border-b border-hairline">
+      <button id="tab-login" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink border-b-2 border-primary bg-white/[0.02]" aria-pressed="true">
+        Sign In
+      </button>
+      <button id="tab-register" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink-subtle hover:text-ink border-b-2 border-transparent transition" aria-pressed="false">
+        Create Account
+      </button>
+    </div>
+
+    <!-- Inner Content -->
+    <div class="p-6 flex flex-col gap-5">
+      <div class="text-center">
+        <h2 id="auth-modal-title" class="font-sans font-bold text-lg tracking-tight text-ink">Welcome to StudyAesthetic</h2>
+        <p id="auth-modal-desc" class="text-xs text-ink-subtle mt-1 font-sans">Sync your layouts, statistics, and preferences across devices.</p>
+      </div>
+
+      <!-- Error / Alert Message Banner -->
+      <div id="auth-error-banner" class="hidden px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans">
+        Invalid credentials. Please try again.
+      </div>
+
+      <!-- Main Form -->
+      <form id="auth-form" class="flex flex-col gap-4" onsubmit="return false;">
+        <!-- Username/Email Field -->
+        <div class="flex flex-col gap-1.5">
+          <label for="auth-email" class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Email Address</label>
+          <input
+            type="email"
+            id="auth-email"
+            placeholder="name@example.com"
+            required
+            class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
+          />
+        </div>
+
+        <!-- Password Field -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between">
+            <label for="auth-password" class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Password</label>
+            <a href="#" class="text-[10px] text-primary-hover hover:underline" id="forgot-password-link">Forgot password?</a>
+          </div>
+          <input
+            type="password"
+            id="auth-password"
+            placeholder="••••••••"
+            required
+            class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
+          />
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          id="auth-submit-btn"
+          class="bg-primary hover:bg-primary-hover text-white text-xs font-semibold py-3 rounded-lg mt-2 transition cursor-pointer select-none flex items-center justify-center gap-2 border border-primary-focus/40 shadow-lg shadow-primary/20"
+        >
+          <span id="submit-btn-text">Sign In</span>
+          <!-- Loading Spinner -->
+          <svg id="submit-btn-spinner" class="animate-spin h-3.5 w-3.5 text-white hidden" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-3 shrink-0 my-1">
+        <div class="h-px bg-hairline flex-1"></div>
+        <span class="text-[9px] font-bold uppercase tracking-wider text-ink-tertiary">or continue with</span>
+        <div class="h-px bg-hairline flex-1"></div>
+      </div>
+
+      <!-- Social / OAuth Options -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="auth-google-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+          </svg>
+          Google
+        </button>
+        <button id="auth-github-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+          </svg>
+          GitHub
+        </button>
+      </div>
+
+      <!-- Demo Account Quick Button -->
+      <button id="auth-demo-btn" class="w-full py-3 px-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 text-xs font-semibold text-primary-hover hover:text-white transition cursor-pointer select-none">
+        🚀 Sign In with Demo Account (Instant)
+      </button>
+
+      <!-- Footer Close Link -->
+      <button id="auth-close-link" class="text-[10px] text-ink-subtle hover:text-ink mt-1 transition cursor-pointer select-none">
+        Go Back to Study Space
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Auth system states and visual handlers
+  const authModal     = document.getElementById("auth-modal");
+  const authModalCard = document.getElementById("auth-modal-card");
+  const closeLink     = document.getElementById("auth-close-link");
+  const demoBtn       = document.getElementById("auth-demo-btn");
+  const googleBtn     = document.getElementById("auth-google-btn");
+  const githubBtn     = document.getElementById("auth-github-btn");
+  const form          = document.getElementById("auth-form") as HTMLFormElement;
+  const submitBtn     = document.getElementById("auth-submit-btn");
+  const submitText    = document.getElementById("submit-btn-text");
+  const spinner       = document.getElementById("submit-btn-spinner");
+  const errorBanner   = document.getElementById("auth-error-banner");
+
+  const tabLogin      = document.getElementById("tab-login") as HTMLButtonElement;
+  const tabRegister   = document.getElementById("tab-register") as HTMLButtonElement;
+  const authTitle     = document.getElementById("auth-modal-title");
+  const authDesc      = document.getElementById("auth-modal-desc");
+
+  let isRegisterTab   = false;
+
+  function closeModal() {
+    authModal?.classList.add("opacity-0", "pointer-events-none");
+    authModalCard?.classList.add("translate-y-4");
+  }
+
+  function switchTab(registerMode: boolean) {
+    isRegisterTab = registerMode;
+    errorBanner?.classList.add("hidden");
+
+    if (isRegisterTab) {
+      tabRegister.classList.add("border-primary", "bg-white/[0.02]");
+      tabRegister.classList.remove("border-transparent", "text-ink-subtle");
+      tabRegister.setAttribute("aria-pressed", "true");
+
+      tabLogin.classList.remove("border-primary", "bg-white/[0.02]");
+      tabLogin.classList.add("border-transparent", "text-ink-subtle");
+      tabLogin.setAttribute("aria-pressed", "false");
+
+      if (authTitle) authTitle.textContent = "Create an Account";
+      if (authDesc) authDesc.textContent = "Save your setups, notes, streaks, and playlists.";
+      if (submitText) submitText.textContent = "Sign Up";
+    } else {
+      tabLogin.classList.add("border-primary", "bg-white/[0.02]");
+      tabLogin.classList.remove("border-transparent", "text-ink-subtle");
+      tabLogin.setAttribute("aria-pressed", "true");
+
+      tabRegister.classList.remove("border-primary", "bg-white/[0.02]");
+      tabRegister.classList.add("border-transparent", "text-ink-subtle");
+      tabRegister.setAttribute("aria-pressed", "false");
+
+      if (authTitle) authTitle.textContent = "Welcome to StudyAesthetic";
+      if (authDesc) authDesc.textContent = "Sync your layouts, statistics, and preferences across devices.";
+      if (submitText) submitText.textContent = "Sign In";
+    }
+  }
+
+  tabLogin?.addEventListener("click", () => switchTab(false));
+  tabRegister?.addEventListener("click", () => switchTab(true));
+  closeLink?.addEventListener("click", closeModal);
+  
+  // Close on backdrop click
+  authModal?.addEventListener("click", (e) => {
+    if (e.target === authModal) closeModal();
+  });
+
+  // Handle Simulated Auth Actions
+  function loginUser(name: string, email: string, isDemo = false) {
+    if (submitBtn) submitBtn.setAttribute("disabled", "true");
+    spinner?.classList.remove("hidden");
+    if (submitText) submitText.textContent = isDemo ? "Synchronizing..." : (isRegisterTab ? "Signing Up..." : "Signing In...");
+
+    // Simulate network save latency of 1s
+    setTimeout(() => {
+      const userProfile = {
+        id: `user-${Date.now()}`,
+        name: name,
+        email: email,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`,
+        authProvider: isDemo ? 'anonymous' : 'email',
+        createdAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString()
+      };
+
+      // Set user profile state in localStorage
+      localStorage.setItem("sa_user_profile_v1", JSON.stringify(userProfile));
+
+      // Mock user preferences and sync default demo data if needed
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      prefs.userId = userProfile.id;
+      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+
+      // Reset submit state
+      if (submitBtn) submitBtn.removeAttribute("disabled");
+      spinner?.classList.add("hidden");
+      
+      closeModal();
+
+      // Dispatch auth change event so header and layouts update
+      document.dispatchEvent(new CustomEvent("auth-state-changed", {
+        detail: { loggedIn: true, user: userProfile }
+      }));
+    }, 1200);
+  }
+
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = (document.getElementById("auth-email") as HTMLInputElement).value;
+    const emailName = email.split('@')[0];
+    const name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+    loginUser(name, email, false);
+  });
+
+  demoBtn?.addEventListener("click", () => {
+    loginUser("Aesthetic Scholar", "scholar@studyaesthetic.com", true);
+  });
+
+  googleBtn?.addEventListener("click", () => {
+    loginUser("Google Explorer", "google.explorer@gmail.com", true);
+  });
+
+  githubBtn?.addEventListener("click", () => {
+    loginUser("GitHub Coder", "git.coder@github.com", true);
+  });
+
+  // Listen to open request
+  document.addEventListener("open-auth-modal", () => {
+    authModal?.classList.remove("opacity-0", "pointer-events-none");
+    authModalCard?.classList.remove("translate-y-4");
+  });
+</script>

@@ -1,0 +1,387 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/StatsWidget.astro
+---
+
+<div
+  id="stats-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="stats"
+  data-default-x="760"
+  data-default-y="480"
+  style="width: 360px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-4 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink-subtle">
+      <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      <span class="text-xs font-semibold uppercase tracking-wider font-sans">Study Statistics</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <!-- Tab switcher -->
+      <div class="flex gap-0.5 bg-surface-2/60 rounded-md p-0.5 border border-hairline">
+        <button id="stats-tab-overview" class="stats-tab active-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="true">Overview</button>
+        <button id="stats-tab-heatmap" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="false">Activity</button>
+        <button id="stats-tab-achievements" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="false">Badges</button>
+      </div>
+      <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize stats widget">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="widget-body px-4 pb-4 pt-3 flex flex-col">
+
+    <!-- ── Overview Tab ───────────────────────────────── -->
+    <div id="stats-panel-overview" class="stats-panel">
+
+      <!-- Today's streak banner -->
+      <div id="streak-banner" class="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg mb-3 hidden">
+        <span class="text-lg" aria-hidden="true">🔥</span>
+        <div>
+          <p class="text-xs font-semibold text-ink" id="streak-text">0 day streak</p>
+          <p class="text-[10px] text-ink-subtle">Keep it going!</p>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+
+        <!-- Today's Focus -->
+        <div class="stat-card bg-surface-2/50 border border-hairline rounded-lg p-3 flex flex-col gap-1">
+          <div class="flex items-center gap-1.5 text-ink-subtle">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07l-.71.71M6.34 17.66l-.71.71m12.02 0l-.71-.71M6.34 6.34l-.71-.71"/>
+            </svg>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">Today</span>
+          </div>
+          <p id="stat-today" class="font-mono text-lg font-bold text-ink leading-none">0m</p>
+          <p class="text-[9px] text-ink-subtle">focus time</p>
+        </div>
+
+        <!-- Weekly Focus -->
+        <div class="stat-card bg-surface-2/50 border border-hairline rounded-lg p-3 flex flex-col gap-1">
+          <div class="flex items-center gap-1.5 text-ink-subtle">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">This Week</span>
+          </div>
+          <p id="stat-week" class="font-mono text-lg font-bold text-ink leading-none">0m</p>
+          <p class="text-[9px] text-ink-subtle">focus time</p>
+        </div>
+
+        <!-- Total Sessions -->
+        <div class="stat-card bg-surface-2/50 border border-hairline rounded-lg p-3 flex flex-col gap-1">
+          <div class="flex items-center gap-1.5 text-ink-subtle">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">Sessions</span>
+          </div>
+          <p id="stat-sessions" class="font-mono text-lg font-bold text-ink leading-none">0</p>
+          <p class="text-[9px] text-ink-subtle">completed</p>
+        </div>
+
+        <!-- Longest Session -->
+        <div class="stat-card bg-surface-2/50 border border-hairline rounded-lg p-3 flex flex-col gap-1">
+          <div class="flex items-center gap-1.5 text-ink-subtle">
+            <svg class="w-3 h-3 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span class="text-[9px] font-semibold uppercase tracking-wide">Best Session</span>
+          </div>
+          <p id="stat-longest" class="font-mono text-lg font-bold text-ink leading-none">—</p>
+          <p class="text-[9px] text-ink-subtle">longest focus</p>
+        </div>
+      </div>
+
+      <!-- Total lifetime stat -->
+      <div class="flex items-center justify-between px-3 py-2 bg-surface-1/60 border border-hairline rounded-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-base" aria-hidden="true">📚</span>
+          <div>
+            <p class="text-[10px] text-ink-subtle">Total Study Time</p>
+            <p id="stat-total" class="font-mono text-sm font-bold text-ink">0h 0m</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] text-ink-subtle">Avg. Session</p>
+          <p id="stat-avg" class="font-mono text-sm font-bold text-ink">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Activity Heatmap Tab ──────────────────────────── -->
+    <div id="stats-panel-heatmap" class="stats-panel hidden">
+      <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-2">7-Day Activity</p>
+
+      <!-- Day labels -->
+      <div id="heatmap-labels" class="grid grid-cols-7 gap-1 mb-1"></div>
+      <!-- Heatmap cells -->
+      <div id="heatmap-grid" class="grid grid-cols-7 gap-1 mb-3"></div>
+
+      <!-- Legend -->
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-[9px] text-ink-subtle">Less</span>
+        <div class="heatmap-cell"></div>
+        <div class="heatmap-cell" data-level="1"></div>
+        <div class="heatmap-cell" data-level="2"></div>
+        <div class="heatmap-cell" data-level="3"></div>
+        <div class="heatmap-cell" data-level="4"></div>
+        <div class="heatmap-cell" data-level="5"></div>
+        <span class="text-[9px] text-ink-subtle">More</span>
+      </div>
+
+      <!-- Weekly bar chart -->
+      <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-2">Daily Focus (mins)</p>
+      <div id="bar-chart" class="flex items-end gap-1.5 h-16"></div>
+    </div>
+
+    <!-- ── Achievements Tab ──────────────────────────────── -->
+    <div id="stats-panel-achievements" class="stats-panel hidden">
+      <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-3">
+        Achievements <span id="badge-count" class="text-primary"></span>
+      </p>
+      <div id="achievements-grid" class="grid grid-cols-3 gap-2"></div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .active-tab {
+    background-color: var(--color-surface-1);
+    color: var(--color-ink);
+    border: 1px solid var(--color-hairline);
+  }
+  .stats-tab:not(.active-tab) {
+    color: var(--color-ink-subtle);
+    background: transparent;
+  }
+  .stats-tab:not(.active-tab):hover {
+    color: var(--color-ink);
+    background-color: rgba(255,255,255,0.04);
+  }
+  .stat-card {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .stat-card:hover {
+    border-color: var(--color-hairline-strong);
+    background-color: rgba(20, 21, 22, 0.8);
+  }
+</style>
+
+<script>
+  // ── Minimize ────────────────────────────────────────────────────
+  const widget      = document.getElementById("stats-widget");
+  const minimizeBtn = widget?.querySelector(".minimize-btn");
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    widget?.classList.toggle("is-minimized");
+  });
+
+  // ── Tab system ──────────────────────────────────────────────────
+  const tabs   = widget?.querySelectorAll<HTMLButtonElement>(".stats-tab") ?? [];
+  const panels = widget?.querySelectorAll<HTMLElement>(".stats-panel") ?? [];
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const id = tab.id.replace("stats-tab-", "stats-panel-");
+      tabs.forEach(t => { t.classList.remove("active-tab"); t.setAttribute("aria-pressed", "false"); });
+      panels.forEach(p => p.classList.add("hidden"));
+      tab.classList.add("active-tab");
+      tab.setAttribute("aria-pressed", "true");
+      document.getElementById(id)?.classList.remove("hidden");
+      if (id === "stats-panel-heatmap") renderHeatmap();
+      if (id === "stats-panel-achievements") renderAchievements();
+    });
+  });
+
+  // ── Time formatting ─────────────────────────────────────────────
+  function fmtSeconds(secs: number): string {
+    if (secs < 60)   return `${secs}s`;
+    if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  // ── Load + render stats ─────────────────────────────────────────
+  interface StudyStats {
+    totalFocusSeconds:      number;
+    todayFocusSeconds:      number;
+    weekFocusSeconds:       number;
+    totalSessionsCompleted: number;
+    avgSessionDuration:     number;
+    longestSession:         number;
+    currentStreak:          number;
+    longestStreak:          number;
+    achievements:           string[];
+  }
+
+  interface ActivityDay {
+    date:         string;
+    focusMinutes: number;
+    sessionsCompleted: number;
+  }
+
+  function getStats(): StudyStats | null {
+    try {
+      const raw = localStorage.getItem("sa_stats_v1");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function getActivity(days = 7): ActivityDay[] {
+    try {
+      const raw      = localStorage.getItem("sa_activity_v1");
+      const activity = raw ? JSON.parse(raw) : {};
+      const result: ActivityDay[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d   = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split("T")[0];
+        result.push(activity[key] || { date: key, focusMinutes: 0, sessionsCompleted: 0 });
+      }
+      return result;
+    } catch { return []; }
+  }
+
+  function renderOverview() {
+    const stats = getStats();
+    if (!stats) return;
+
+    const todayEl    = document.getElementById("stat-today");
+    const weekEl     = document.getElementById("stat-week");
+    const sessEl     = document.getElementById("stat-sessions");
+    const longEl     = document.getElementById("stat-longest");
+    const totalEl    = document.getElementById("stat-total");
+    const avgEl      = document.getElementById("stat-avg");
+    const streakBn   = document.getElementById("streak-banner");
+    const streakTxt  = document.getElementById("streak-text");
+
+    if (todayEl)   todayEl.textContent   = fmtSeconds(stats.todayFocusSeconds);
+    if (weekEl)    weekEl.textContent    = fmtSeconds(stats.weekFocusSeconds);
+    if (sessEl)    sessEl.textContent    = stats.totalSessionsCompleted.toString();
+    if (longEl)    longEl.textContent    = stats.longestSession > 0 ? fmtSeconds(stats.longestSession) : "—";
+    if (totalEl)   totalEl.textContent   = fmtSeconds(stats.totalFocusSeconds);
+    if (avgEl)     avgEl.textContent     = stats.avgSessionDuration > 0 ? fmtSeconds(stats.avgSessionDuration) : "—";
+
+    if (stats.currentStreak > 0 && streakBn && streakTxt) {
+      streakBn.classList.remove("hidden");
+      streakTxt.textContent = `${stats.currentStreak} day${stats.currentStreak > 1 ? "s" : ""} streak`;
+    }
+  }
+
+  function renderHeatmap() {
+    const data       = getActivity(7);
+    const labelsEl   = document.getElementById("heatmap-labels");
+    const gridEl     = document.getElementById("heatmap-grid");
+    const barChartEl = document.getElementById("bar-chart");
+    if (!labelsEl || !gridEl || !barChartEl) return;
+
+    const days    = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const maxMins = Math.max(...data.map(d => d.focusMinutes), 1);
+
+    labelsEl.innerHTML = "";
+    gridEl.innerHTML   = "";
+    barChartEl.innerHTML = "";
+
+    data.forEach(day => {
+      const date      = new Date(day.date + "T12:00:00");
+      const mins      = day.focusMinutes;
+      const level     = mins === 0 ? 0
+        : mins < 15  ? 1
+        : mins < 30  ? 2
+        : mins < 60  ? 3
+        : mins < 120 ? 4 : 5;
+
+      // Label
+      const label = document.createElement("div");
+      label.textContent = days[date.getDay()].slice(0, 1);
+      label.className   = "text-center text-[9px] text-ink-subtle font-mono";
+      labelsEl.appendChild(label);
+
+      // Cell
+      const cell = document.createElement("div");
+      cell.className = "heatmap-cell";
+      if (level > 0) cell.setAttribute("data-level", level.toString());
+      cell.title = `${day.date}: ${mins}m`;
+      gridEl.appendChild(cell);
+
+      // Bar
+      const barWrap = document.createElement("div");
+      barWrap.className = "flex-1 flex flex-col items-center gap-1";
+
+      const bar = document.createElement("div");
+      const pct = (mins / maxMins) * 100;
+      bar.className = "w-full rounded-sm transition-all duration-500";
+      bar.style.height = `${Math.max(pct, 2)}%`;
+      bar.style.background = level > 0
+        ? `rgba(94, 106, 210, ${0.3 + level * 0.14})`
+        : "var(--color-surface-2)";
+      bar.title = `${mins}m`;
+
+      const dayLbl = document.createElement("span");
+      dayLbl.className   = "text-[8px] text-ink-subtle font-mono";
+      dayLbl.textContent = days[date.getDay()].slice(0, 1);
+
+      barWrap.appendChild(bar);
+      barWrap.appendChild(dayLbl);
+      barChartEl.appendChild(barWrap);
+    });
+  }
+
+  function renderAchievements() {
+    const stats      = getStats();
+    const gridEl     = document.getElementById("achievements-grid");
+    const countEl    = document.getElementById("badge-count");
+    if (!gridEl) return;
+
+    const ACHIEVEMENTS = [
+      { id: "first_session",  title: "First Focus",       icon: "🎯", desc: "Complete your first session" },
+      { id: "ten_sessions",   title: "Getting Serious",   icon: "🔟", desc: "Complete 10 sessions" },
+      { id: "fifty_sessions", title: "Study Master",      icon: "🏆", desc: "Complete 50 sessions" },
+      { id: "one_hour",       title: "In the Zone",       icon: "⏱️", desc: "1 hour total focus" },
+      { id: "ten_hours",      title: "Deep Worker",       icon: "🧠", desc: "10 hours total focus" },
+      { id: "hundred_hours",  title: "Scholar",           icon: "📚", desc: "100 hours total focus" },
+      { id: "streak_3",       title: "On a Roll",         icon: "🔥", desc: "3 day streak" },
+      { id: "streak_7",       title: "Weekly Warrior",    icon: "⚡", desc: "7 day streak" },
+      { id: "streak_30",      title: "Unstoppable",       icon: "🌟", desc: "30 day streak" },
+      { id: "long_session",   title: "Marathon",          icon: "🏃", desc: "Session > 1 hour" },
+    ];
+
+    const unlocked = stats?.achievements || [];
+    if (countEl) countEl.textContent = `${unlocked.length}/${ACHIEVEMENTS.length}`;
+    gridEl.innerHTML = "";
+
+    ACHIEVEMENTS.forEach(a => {
+      const isUnlocked = unlocked.includes(a.id);
+      const badge = document.createElement("div");
+      badge.className = `achievement-badge flex flex-col items-center gap-1.5 p-2.5 rounded-lg border cursor-default text-center ${isUnlocked
+        ? "bg-primary/10 border-primary/30"
+        : "bg-surface-2/40 border-hairline locked"}`;
+      badge.title = a.desc;
+      badge.setAttribute("aria-label", `${a.title}: ${isUnlocked ? "Unlocked" : "Locked"}`);
+      badge.innerHTML = `
+        <span class="text-xl" aria-hidden="true">${a.icon}</span>
+        <span class="text-[9px] font-semibold leading-tight ${isUnlocked ? "text-ink" : "text-ink-subtle"}">${a.title}</span>
+      `;
+      gridEl.appendChild(badge);
+    });
+  }
+
+  // ── Listen for session complete events from TimerWidget ──────────
+  document.addEventListener("study-session-complete", (e: any) => {
+    // Re-render overview after a session completes
+    setTimeout(renderOverview, 100);
+  });
+
+  // ── Initial render ───────────────────────────────────────────────
+  renderOverview();
+</script>

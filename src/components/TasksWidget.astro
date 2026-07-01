@@ -1,0 +1,107 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/TasksWidget.astro
+---
+
+<div
+  id="tasks-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="tasks"
+  data-default-x="80"
+  data-default-y="500"
+  style="width: 320px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-4 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink-subtle">
+      <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
+      <span class="text-xs font-semibold uppercase tracking-wider font-sans">Task List</span>
+    </div>
+    <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize tasks widget">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="widget-body px-4 pb-4 pt-4 flex flex-col">
+    <div id="tasks-list" class="max-h-[180px] overflow-y-auto space-y-2 mb-4 scrollbar-thin" aria-live="polite">
+      <div id="no-tasks-message" class="text-xs text-ink-subtle text-center py-4">No tasks yet. Add one below!</div>
+    </div>
+    <form id="add-task-form" class="flex items-center gap-2">
+      <input
+        type="text"
+        id="task-input"
+        placeholder="New study task…"
+        required
+        autocomplete="off"
+        aria-label="New study task"
+        class="flex-1 min-w-0 bg-surface-2/70 border border-hairline focus:border-primary-focus focus:outline-none rounded-md px-3 py-1.5 text-xs text-ink placeholder-ink-subtle transition font-sans"
+      />
+      <button type="submit" class="bg-primary hover:bg-primary-hover active:bg-primary-focus text-white text-xs font-semibold px-3 py-1.5 rounded-md transition cursor-pointer shrink-0">Add</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  interface Task { id: string; text: string; completed: boolean; }
+
+  const widget      = document.getElementById("tasks-widget");
+  const minimizeBtn = widget?.querySelector(".minimize-btn");
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    widget?.classList.toggle("is-minimized");
+  });
+
+  const tasksList       = document.getElementById("tasks-list");
+  const noTasksMessage  = document.getElementById("no-tasks-message");
+  const addForm         = document.getElementById("add-task-form") as HTMLFormElement;
+  const taskInput       = document.getElementById("task-input") as HTMLInputElement;
+  let tasks: Task[] = [];
+
+  const stored = localStorage.getItem("study-tasks");
+  if (stored) { tasks = JSON.parse(stored); renderTasks(); }
+
+  addForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = taskInput.value.trim();
+    if (!text) return;
+    tasks.push({ id: Date.now().toString(), text, completed: false });
+    saveTasks(); renderTasks();
+    taskInput.value = "";
+  });
+
+  function saveTasks() { localStorage.setItem("study-tasks", JSON.stringify(tasks)); }
+
+  function renderTasks() {
+    if (!tasksList) return;
+    tasksList.querySelectorAll(".task-item").forEach(el => el.remove());
+    if (tasks.length === 0) { noTasksMessage?.classList.remove("hidden"); return; }
+    noTasksMessage?.classList.add("hidden");
+    tasks.forEach(task => {
+      const item = document.createElement("div");
+      item.className = "task-item flex items-center justify-between p-2 rounded-md bg-surface-2/40 border border-hairline/50 hover:bg-surface-2/80 transition";
+      const left = document.createElement("div");
+      left.className = "flex items-center gap-2 flex-1 min-w-0";
+      const checkBtn = document.createElement("button");
+      checkBtn.type = "button";
+      checkBtn.className = `w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center shrink-0 ${task.completed ? "bg-primary border-primary text-white" : "border-hairline hover:border-primary-focus bg-surface-1"}`;
+      checkBtn.setAttribute("aria-label", task.completed ? "Mark incomplete" : "Mark complete");
+      checkBtn.innerHTML = task.completed ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>` : "";
+      checkBtn.addEventListener("click", () => { task.completed = !task.completed; saveTasks(); renderTasks(); });
+      const textSpan = document.createElement("span");
+      textSpan.className = `text-xs font-sans truncate ${task.completed ? "line-through text-ink-subtle" : "text-ink-muted"}`;
+      textSpan.textContent = task.text;
+      left.appendChild(checkBtn); left.appendChild(textSpan);
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer shrink-0";
+      del.setAttribute("aria-label", "Delete task");
+      del.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+      del.addEventListener("click", () => { tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks(); });
+      item.appendChild(left); item.appendChild(del); tasksList.appendChild(item);
+    });
+  }
+</script>

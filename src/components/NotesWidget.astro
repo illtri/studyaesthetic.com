@@ -1,0 +1,136 @@
+---
+// e:/ARUNAV WORKS/studyaesthetic.com/src/components/NotesWidget.astro
+---
+
+<div
+  id="notes-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="notes"
+  data-default-x="760"
+  data-default-y="80"
+  style="width: 340px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-4 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink-subtle">
+      <svg class="w-4 h-4 text-primary shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      <span class="text-xs font-semibold uppercase tracking-wider font-sans">Notes</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button id="add-note-btn" class="text-ink-subtle hover:text-ink hover:bg-surface-2 px-1.5 py-0.5 rounded text-[10px] font-semibold border border-hairline transition cursor-pointer">+ New</button>
+      <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize notes widget">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="widget-body px-4 pb-4 pt-4 flex flex-col">
+    <!-- Notes Tabs -->
+    <div id="notes-tabs" class="flex gap-1 overflow-x-auto pb-2 mb-3 border-b border-hairline/40 scrollbar-none whitespace-nowrap" style="scrollbar-width: none;"></div>
+
+    <!-- Editor -->
+    <div id="note-editor" class="flex flex-col space-y-3 hidden">
+      <div class="flex items-center justify-between gap-2">
+        <input
+          type="text"
+          id="note-title-input"
+          placeholder="Note Title"
+          aria-label="Note title"
+          autocomplete="off"
+          class="flex-1 min-w-0 bg-transparent border-b border-transparent hover:border-hairline focus:border-primary-focus focus:outline-none py-0.5 text-xs font-bold text-ink transition"
+        />
+        <button id="delete-note-btn" class="text-ink-subtle hover:text-red-400 hover:bg-red-500/10 p-1 rounded transition cursor-pointer shrink-0" aria-label="Delete note">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </div>
+      <textarea
+        id="note-content-input"
+        placeholder="Write your study notes here…"
+        rows="5"
+        aria-label="Note content"
+        class="w-full bg-surface-2/40 border border-hairline/80 focus:border-primary-focus focus:outline-none rounded-lg p-2.5 text-xs text-ink-muted placeholder-ink-subtle font-mono resize-none leading-relaxed transition"
+      ></textarea>
+    </div>
+
+    <div id="no-notes-message" class="text-xs text-ink-subtle text-center py-6">No notes yet. Click "+ New" to start!</div>
+  </div>
+</div>
+
+<script>
+  interface Note { id: string; title: string; content: string; }
+  let notes: Note[] = [];
+  let activeNoteId: string | null = null;
+
+  const widget        = document.getElementById("notes-widget");
+  const minimizeBtn   = widget?.querySelector(".minimize-btn");
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    widget?.classList.toggle("is-minimized");
+  });
+
+  const tabsContainer   = document.getElementById("notes-tabs");
+  const noteEditor      = document.getElementById("note-editor");
+  const noNotesMsg      = document.getElementById("no-notes-message");
+  const titleInput      = document.getElementById("note-title-input") as HTMLInputElement;
+  const contentInput    = document.getElementById("note-content-input") as HTMLTextAreaElement;
+  const addNoteBtn      = document.getElementById("add-note-btn");
+  const deleteNoteBtn   = document.getElementById("delete-note-btn");
+
+  const stored = localStorage.getItem("study-notes");
+  if (stored) {
+    notes = JSON.parse(stored);
+    if (notes.length > 0) activeNoteId = notes[0].id;
+    renderNotes();
+  }
+
+  addNoteBtn?.addEventListener("click", () => {
+    const n: Note = { id: Date.now().toString(), title: `Draft ${notes.length + 1}`, content: "" };
+    notes.push(n); activeNoteId = n.id; saveNotes(); renderNotes();
+  });
+  deleteNoteBtn?.addEventListener("click", () => {
+    if (!activeNoteId) return;
+    notes = notes.filter(n => n.id !== activeNoteId);
+    activeNoteId = notes.length > 0 ? notes[0].id : null;
+    saveNotes(); renderNotes();
+  });
+  titleInput?.addEventListener("input", () => {
+    const note = notes.find(n => n.id === activeNoteId);
+    if (note) { note.title = titleInput.value; saveNotes(); updateActiveTabTitle(); }
+  });
+  contentInput?.addEventListener("input", () => {
+    const note = notes.find(n => n.id === activeNoteId);
+    if (note) { note.content = contentInput.value; saveNotes(); }
+  });
+
+  function saveNotes() { localStorage.setItem("study-notes", JSON.stringify(notes)); }
+  function updateActiveTabTitle() {
+    if (!activeNoteId || !tabsContainer) return;
+    const tab = tabsContainer.querySelector(`[data-id="${activeNoteId}"]`) as HTMLElement;
+    if (tab) tab.textContent = titleInput.value || "Untitled";
+  }
+  function renderNotes() {
+    if (!tabsContainer) return;
+    tabsContainer.innerHTML = "";
+    if (notes.length === 0) {
+      noNotesMsg?.classList.remove("hidden"); noteEditor?.classList.add("hidden"); return;
+    }
+    noNotesMsg?.classList.add("hidden"); noteEditor?.classList.remove("hidden");
+    notes.forEach(note => {
+      const tab = document.createElement("button");
+      tab.className = `px-2.5 py-1 text-[10px] font-semibold border rounded-md cursor-pointer transition shrink-0 ${note.id === activeNoteId ? "bg-primary/20 text-primary border-primary/40" : "bg-surface-2 text-ink-subtle border-hairline hover:text-ink hover:bg-surface-3"}`;
+      tab.setAttribute("data-id", note.id);
+      tab.textContent = note.title || "Untitled";
+      tab.addEventListener("click", () => { activeNoteId = note.id; renderNotes(); });
+      tabsContainer.appendChild(tab);
+    });
+    const active = notes.find(n => n.id === activeNoteId);
+    if (active) { titleInput.value = active.title; contentInput.value = active.content; }
+  }
+</script>
