@@ -376,12 +376,163 @@
     });
   }
 
-  // ── Listen for session complete events from TimerWidget ──────────
-  document.addEventListener("study-session-complete", (e: any) => {
-    // Re-render overview after a session completes
-    setTimeout(renderOverview, 100);
+  // ── Supabase helpers (lazy-loaded to keep widget self-contained) ──
+  async function getSupabaseModules() {
+    try {
+      const [{ supabase, isSupabaseConfigured }, { pushStatsToCloud, pullStatsFromCloud, pushActivityToCloud, pullActivityFromCloud }] =
+        await Promise.all([
+          import("../lib/supabase"),
+          import("../lib/supabaseSync"),
+        ]);
+      return { supabase, isSupabaseConfigured, pushStatsToCloud, pullStatsFromCloud, pushActivityToCloud, pullActivityFromCloud };
+    } catch { return null; }
+  }
+
+  const LOCAL_ONLY_PROVIDERS = ["anonymous", "demo"];
+
+  function getCurrentUser(): { id: string; authProvider: string } | null {
+    try {
+      const raw = localStorage.getItem("sa_user_profile_v1");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  async function syncStatsToCloud() {
+    const user = getCurrentUser();
+    if (!user || LOCAL_ONLY_PROVIDERS.includes(user.authProvider)) return;
+    const mods = await getSupabaseModules();
+    if (!mods || !mods.isSupabaseConfigured) return;
+    const stats = getStats();
+    if (stats) {
+      mods.pushStatsToCloud(user.id, stats as any).catch(() => {});
+    }
+    // Also push activity
+    try {
+      const rawAct = localStorage.getItem("sa_activity_v1");
+      if (rawAct) {
+        const activity = JSON.parse(rawAct);
+        mods.pushActivityToCloud(user.id, activity).catch(() => {});
+      }
+    } catch {}
+  }
+
+  async function pullAndMergeFromCloud(userId: string) {
+    const mods = await getSupabaseModules();
+    if (!mods || !mods.isSupabaseConfigured) return;
+
+    // Pull stats
+    const cloudStats = await mods.pullStatsFromCloud(userId);
+    if (cloudStats) {
+      // Merge: take cloud values if they're larger (conservative merge)
+      const local = getStats();
+      const merged = {
+        ...(local || {}),
+        ...cloudStats,
+        // Always keep the higher numbers so we don't regress
+        totalFocusSeconds:      Math.max(local?.totalFocusSeconds || 0,      cloudStats.totalFocusSeconds || 0),
+        totalSessionsCompleted: Math.max(local?.totalSessionsCompleted || 0,  cloudStats.totalSessionsCompleted || 0),
+        longestSession:         Math.max(local?.longestSession || 0,          cloudStats.longestSession || 0),
+        longestStreak:          Math.max(local?.longestStreak || 0,           cloudStats.longestStreak || 0),
+        // Merge achievements (union)
+        achievements:           [...new Set([...(local?.achievements || []), ...(cloudStats.achievements || [])])],
+      };
+      try { localStorage.setItem("sa_stats_v1", JSON.stringify(merged)); } catch {}
+    }
+
+    // Pull activity
+    const cloudActivity = await mods.pullActivityFromCloud(userId);
+    if (cloudActivity) {
+      try {
+        const rawLocal = localStorage.getItem("sa_activity_v1");
+        const localActivity: Record<string, any> = rawLocal ? JSON.parse(rawLocal) : {};
+        // Merge by date key — keep the max focus minutes
+        for (const [date, dayData] of Object.entries(cloudActivity)) {
+          const cloudDay = dayData as any;
+          const localDay = localActivity[date];
+          if (!localDay) {
+            localActivity[date] = cloudDay;
+          } else {
+            localActivity[date] = {
+              ...localDay,
+              focusMinutes:      Math.max(localDay.focusMinutes || 0,      cloudDay.focusMinutes || 0),
+              sessionsCompleted: Math.max(localDay.sessionsCompleted || 0,  cloudDay.sessionsCompleted || 0),
+            };
+          }
+        }
+        localStorage.setItem("sa_activity_v1", JSON.stringify(localActivity));
+      } catch {}
+    }
+
+    renderOverview();
+    // Refresh heatmap if visible
+    const heatmapPanel = document.getElementById("stats-panel-heatmap");
+    if (heatmapPanel && !heatmapPanel.classList.contains("hidden")) renderHeatmap();
+  }
+
+  // ── Real-time tick during active timer ───────────────────────────
+  // Track in-progress session seconds for live "Today" display
+  let _liveSessionStart: number | null = null;
+  let _liveBaseSeconds  = 0;
+
+  document.addEventListener("study-session-start", () => {
+    _liveSessionStart = Date.now();
+    // Capture current saved today seconds as the base
+    const stats = getStats();
+    _liveBaseSeconds = stats?.todayFocusSeconds ?? 0;
+  });
+
+  document.addEventListener("study-session-pause", () => {
+    // Session paused — stop live accumulation but keep base
+    if (_liveSessionStart !== null) {
+      const elapsed = Math.floor((Date.now() - _liveSessionStart) / 1000);
+      _liveBaseSeconds += elapsed;
+      _liveSessionStart = null;
+    }
+  });
+
+  document.addEventListener("study-session-complete", () => {
+    _liveSessionStart = null;
+    _liveBaseSeconds  = 0;
+    // Give UserStore a moment to persist to localStorage, then re-render
+    setTimeout(() => {
+      renderOverview();
+      // Also refresh heatmap if visible
+      const heatmapPanel = document.getElementById("stats-panel-heatmap");
+      if (heatmapPanel && !heatmapPanel.classList.contains("hidden")) renderHeatmap();
+      // Push to cloud
+      syncStatsToCloud();
+    }, 150);
+  });
+
+  // Live tick every second: update "Today" stat in real time while timer runs
+  setInterval(() => {
+    if (_liveSessionStart === null) return;
+    const elapsed   = Math.floor((Date.now() - _liveSessionStart) / 1000);
+    const liveTotal = _liveBaseSeconds + elapsed;
+    const todayEl   = document.getElementById("stat-today");
+    if (todayEl) todayEl.textContent = fmtSeconds(liveTotal);
+  }, 1000);
+
+  // ── Auth state changes (login / logout) ──────────────────────────
+  document.addEventListener("auth-state-changed", async (e: any) => {
+    const { loggedIn, user } = e.detail || {};
+    if (loggedIn && user?.id && !LOCAL_ONLY_PROVIDERS.includes(user.authProvider || "")) {
+      // Pull cloud data and merge into localStorage, then re-render
+      await pullAndMergeFromCloud(user.id);
+    } else {
+      // Logged out or local — just re-render from localStorage
+      renderOverview();
+    }
   });
 
   // ── Initial render ───────────────────────────────────────────────
   renderOverview();
+
+  // Also attempt cloud pull on initial load if user is already logged in
+  (async () => {
+    const user = getCurrentUser();
+    if (user && !LOCAL_ONLY_PROVIDERS.includes(user.authProvider)) {
+      await pullAndMergeFromCloud(user.id);
+    }
+  })();
 </script>

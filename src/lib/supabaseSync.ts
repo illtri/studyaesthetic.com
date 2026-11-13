@@ -137,9 +137,53 @@ export async function pullStatsFromCloud(userId: string): Promise<Partial<StudyS
       mostProductiveHour: data.most_productive_hour,
       achievements: data.achievements || [],
       lastCalculated: data.last_calculated,
+      // activity_data is stored as JSONB alongside stats
+      ...(data.activity_data ? { _activityData: data.activity_data } : {}),
     };
   } catch (err) {
     console.error('Supabase: pullStatsFromCloud exception', err);
+    return null;
+  }
+}
+
+// ── Activity sync (stored as JSONB in study_stats.activity_data) ────
+
+export async function pushActivityToCloud(
+  userId: string,
+  activity: Record<string, unknown>
+): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase.from('study_stats').upsert({
+      user_id: userId,
+      activity_data: activity,
+      last_calculated: new Date().toISOString(),
+    });
+    if (error) {
+      console.warn('Supabase: push activity error', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Supabase: pushActivityToCloud exception', err);
+    return false;
+  }
+}
+
+export async function pullActivityFromCloud(
+  userId: string
+): Promise<Record<string, unknown> | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('study_stats')
+      .select('activity_data')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error || !data?.activity_data) return null;
+    return data.activity_data as Record<string, unknown>;
+  } catch (err) {
+    console.error('Supabase: pullActivityFromCloud exception', err);
     return null;
   }
 }

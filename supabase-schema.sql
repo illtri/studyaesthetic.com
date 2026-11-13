@@ -108,8 +108,24 @@ CREATE TABLE IF NOT EXISTS public.study_stats (
   most_used_background TEXT,
   most_productive_hour INTEGER,
   achievements TEXT[] DEFAULT '{}',
+  activity_data JSONB DEFAULT '{}'::JSONB,
   last_calculated TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: add activity_data column if it doesn't exist yet
+-- (Safe to run on an existing database — ALTER TABLE IF NOT EXISTS column)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name   = 'study_stats'
+      AND column_name  = 'activity_data'
+  ) THEN
+    ALTER TABLE public.study_stats ADD COLUMN activity_data JSONB DEFAULT '{}'::JSONB;
+  END IF;
+END;
+$$;
 
 ALTER TABLE public.study_stats ENABLE ROW LEVEL SECURITY;
 
