@@ -258,6 +258,10 @@ import LoginModal from '../components/LoginModal.astro';
 </Layout>
 
 <script>
+  import { supabase, isSupabaseConfigured } from "../lib/supabase";
+  import { pushPreferencesToCloud, pullPreferencesFromCloud, pushStatsToCloud, pullStatsFromCloud } from "../lib/supabaseSync";
+  import { getPreferences, recalculateStats } from "../utils/UserStore";
+
   // ═══════════════════════════════════════════════════════════════════
   // WIDGET MANAGER — Precise transform-based drag system
   // ═══════════════════════════════════════════════════════════════════
@@ -349,7 +353,7 @@ import LoginModal from '../components/LoginModal.astro';
     }
   }
 
-  function triggerCloudSync() {
+  async function triggerCloudSync() {
     const user = getCurrentUser();
     if (!user || LOCAL_ONLY_PROVIDERS.includes(user.authProvider)) {
       updateCloudSyncUI("local");
@@ -358,10 +362,25 @@ import LoginModal from '../components/LoginModal.astro';
 
     updateCloudSyncUI("syncing");
 
-    if (syncTimeoutId) clearTimeout(syncTimeoutId);
-    syncTimeoutId = setTimeout(() => {
-      updateCloudSyncUI("saved");
-    }, 1200);
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const prefs = getPreferences();
+        const stats = recalculateStats();
+        await Promise.allSettled([
+          pushPreferencesToCloud(user.id, prefs),
+          pushStatsToCloud(user.id, stats),
+        ]);
+        updateCloudSyncUI("saved");
+      } catch (err) {
+        console.warn("Cloud sync error:", err);
+        updateCloudSyncUI("saved");
+      }
+    } else {
+      if (syncTimeoutId) clearTimeout(syncTimeoutId);
+      syncTimeoutId = setTimeout(() => {
+        updateCloudSyncUI("saved");
+      }, 1200);
+    }
   }
 
   function updateCloudSyncUI(state: "local" | "syncing" | "saved") {
@@ -1095,7 +1114,15 @@ import LoginModal from '../components/LoginModal.astro';
   });
 
   // Sign out handler
-  btnSignOut?.addEventListener("click", () => {
+  btnSignOut?.addEventListener("click", async () => {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn("Sign out error:", err);
+      }
+    }
+
     // Revert user profile back to anonymous default
     const anonProfile = {
       id:           `user-anon-${Date.now()}`,
@@ -1114,12 +1141,31 @@ import LoginModal from '../components/LoginModal.astro';
   });
 
   // Listen to auth state changes from LoginModal
-  document.addEventListener("auth-state-changed", (e: any) => {
+  document.addEventListener("auth-state-changed", async (e: any) => {
     syncAuthUI();
-    // Reload layouts for the new scoped user
     initWidgets();
-    // Show a sync completed indicator
-    if (e.detail.loggedIn) {
+
+    if (e.detail?.loggedIn && e.detail?.user?.id && !LOCAL_ONLY_PROVIDERS.includes(e.detail.user.authProvider)) {
+      updateCloudSyncUI("syncing");
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const [remotePrefs, remoteStats] = await Promise.all([
+            pullPreferencesFromCloud(e.detail.user.id),
+            pullStatsFromCloud(e.detail.user.id),
+          ]);
+          if (remotePrefs) {
+            const current = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+            localStorage.setItem("sa_user_prefs_v1", JSON.stringify({ ...current, ...remotePrefs }));
+          }
+          if (remoteStats) {
+            const current = JSON.parse(localStorage.getItem("sa_stats_v1") || "{}");
+            localStorage.setItem("sa_stats_v1", JSON.stringify({ ...current, ...remoteStats }));
+          }
+          initWidgets();
+        } catch (err) {
+          console.warn("Error pulling cloud data on login:", err);
+        }
+      }
       triggerCloudSync();
     }
   });

@@ -125,6 +125,8 @@
 </div>
 
 <script>
+  import { supabase, isSupabaseConfigured } from "../lib/supabase";
+
   // Auth system states and visual handlers
   const authModal     = document.getElementById("auth-modal");
   const authModalCard = document.getElementById("auth-modal-card");
@@ -148,7 +150,23 @@
 
   const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
+  function showBanner(message: string, isError = true) {
+    if (!errorBanner) return;
+    errorBanner.textContent = message;
+    if (isError) {
+      errorBanner.className = "px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans";
+    } else {
+      errorBanner.className = "px-3.5 py-2.5 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary-hover font-sans";
+    }
+    errorBanner.classList.remove("hidden");
+  }
+
+  function hideBanner() {
+    errorBanner?.classList.add("hidden");
+  }
+
   function openModal() {
+    hideBanner();
     lastFocused = document.activeElement as HTMLElement | null;
     authModal?.classList.remove("opacity-0", "pointer-events-none");
     authModal?.removeAttribute("aria-hidden");
@@ -162,14 +180,13 @@
     authModal?.classList.add("opacity-0", "pointer-events-none");
     authModal?.setAttribute("aria-hidden", "true");
     authModalCard?.classList.add("translate-y-4");
-    // Return focus to whatever opened the dialog
     lastFocused?.focus?.();
     lastFocused = null;
   }
 
   function switchTab(registerMode: boolean) {
     isRegisterTab = registerMode;
-    errorBanner?.classList.add("hidden");
+    hideBanner();
 
     if (isRegisterTab) {
       tabRegister.classList.add("border-primary", "bg-white/[0.02]");
@@ -217,7 +234,7 @@
     if (!authModal?.classList.contains("pointer-events-none")) closeModal();
   });
 
-  // Keep the focus inside the dialog while it is open
+  // Keep focus inside dialog
   authModal?.addEventListener("keydown", (e) => {
     if (e.key !== "Tab") return;
     const items = Array.from(authModal.querySelectorAll<HTMLElement>(FOCUSABLE))
@@ -234,73 +251,214 @@
     }
   });
 
-  // Handle Simulated Auth Actions
-  function loginUser(name: string, email: string, provider: 'email' | 'google' | 'github' | 'demo' = 'email') {
+  function setProfileAndNotify(profile: any) {
+    localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
+    try {
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      prefs.userId = profile.id;
+      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+    } catch {}
+
+    closeModal();
+    document.dispatchEvent(new CustomEvent("auth-state-changed", {
+      detail: { loggedIn: true, user: profile }
+    }));
+  }
+
+  // Fallback demo/local action
+  function loginDemo(name: string, email: string, provider: 'anonymous' | 'email' | 'google' | 'github' | 'demo' = 'demo') {
     if (submitBtn) submitBtn.setAttribute("disabled", "true");
     spinner?.classList.remove("hidden");
-    if (submitText) submitText.textContent = provider === "email"
-      ? (isRegisterTab ? "Signing Up…" : "Signing In…")
-      : "Signing In…";
+    if (submitText) submitText.textContent = "Signing In…";
 
-    // Simulate network save latency of 1s
     setTimeout(() => {
       const userProfile = {
         id: `user-${Date.now()}`,
         name: name,
         email: email,
         avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
-        // The provider matters: the header treats anything other than
-        // "anonymous" as a signed-in account. Google/GitHub/demo used
-        // to be stored as "anonymous", which made those buttons look
-        // like they did nothing.
         authProvider: provider,
         createdAt: new Date().toISOString(),
         lastActiveAt: new Date().toISOString()
       };
 
-      // Set user profile state in localStorage
-      localStorage.setItem("sa_user_profile_v1", JSON.stringify(userProfile));
-
-      // Mock user preferences and sync default demo data if needed
-      try {
-        const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
-        prefs.userId = userProfile.id;
-        localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
-      } catch {}
-
-      // Reset submit state
       if (submitBtn) submitBtn.removeAttribute("disabled");
       spinner?.classList.add("hidden");
-
-      closeModal();
-
-      // Dispatch auth change event so header and layouts update
-      document.dispatchEvent(new CustomEvent("auth-state-changed", {
-        detail: { loggedIn: true, user: userProfile }
-      }));
-    }, 1200);
+      setProfileAndNotify(userProfile);
+    }, 800);
   }
 
-  form?.addEventListener("submit", (e) => {
+  // Handle Form Submission (Supabase + Local fallback)
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = (document.getElementById("auth-email") as HTMLInputElement).value.trim();
-    if (!email) return;
+    hideBanner();
+
+    const emailInput = document.getElementById("auth-email") as HTMLInputElement;
+    const passwordInput = document.getElementById("auth-password") as HTMLInputElement;
+    const email = emailInput?.value.trim();
+    const password = passwordInput?.value;
+
+    if (!email || !password) return;
+
     const emailName = email.split('@')[0];
     const name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-    loginUser(name, email, 'email');
+
+    if (submitBtn) submitBtn.setAttribute("disabled", "true");
+    spinner?.classList.remove("hidden");
+    if (submitText) submitText.textContent = isRegisterTab ? "Signing Up…" : "Signing In…";
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (isRegisterTab) {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: name,
+                name: name,
+              }
+            }
+          });
+
+          if (error) {
+            showBanner(error.message, true);
+            return;
+          }
+
+          if (data.user) {
+            if (data.session) {
+              const profile = {
+                id: data.user.id,
+                name: name,
+                email: data.user.email,
+                avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.id)}`,
+                authProvider: 'email',
+                createdAt: data.user.created_at,
+                lastActiveAt: new Date().toISOString()
+              };
+              setProfileAndNotify(profile);
+            } else {
+              showBanner("Account created! Please check your email to confirm your account.", false);
+            }
+          }
+        } else {
+          // Sign In
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) {
+            showBanner(error.message, true);
+            return;
+          }
+
+          if (data.user) {
+            const profile = {
+              id: data.user.id,
+              name: data.user.user_metadata?.full_name || name,
+              email: data.user.email,
+              avatarUrl: data.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.id)}`,
+              authProvider: 'email',
+              createdAt: data.user.created_at,
+              lastActiveAt: new Date().toISOString()
+            };
+            setProfileAndNotify(profile);
+          }
+        }
+      } catch (err: any) {
+        showBanner(err?.message || "Authentication error occurred.", true);
+      } finally {
+        if (submitBtn) submitBtn.removeAttribute("disabled");
+        spinner?.classList.add("hidden");
+        if (submitText) submitText.textContent = isRegisterTab ? "Sign Up" : "Sign In";
+      }
+    } else {
+      // Local demo fallback
+      loginDemo(name, email, 'email');
+    }
   });
 
+  // Demo Account Button
   demoBtn?.addEventListener("click", () => {
-    loginUser("Aesthetic Scholar", "scholar@studyaesthetic.com", 'demo');
+    loginDemo("Aesthetic Scholar", "scholar@studyaesthetic.com", 'demo');
   });
 
-  googleBtn?.addEventListener("click", () => {
-    loginUser("Google Explorer", "google.explorer@gmail.com", 'google');
+  // OAuth Google
+  googleBtn?.addEventListener("click", async () => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) showBanner(error.message, true);
+    } else {
+      loginDemo("Google Explorer", "google.explorer@gmail.com", 'google');
+    }
   });
 
-  githubBtn?.addEventListener("click", () => {
-    loginUser("GitHub Coder", "git.coder@github.com", 'github');
+  // OAuth GitHub
+  githubBtn?.addEventListener("click", async () => {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) showBanner(error.message, true);
+    } else {
+      loginDemo("GitHub Coder", "git.coder@github.com", 'github');
+    }
   });
+
+  // Check Supabase session on initialization
+  if (isSupabaseConfigured && supabase) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        const profile = {
+          id: u.id,
+          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'User',
+          email: u.email || '',
+          avatarUrl: u.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.id)}`,
+          authProvider: (u.app_metadata?.provider || 'email'),
+          createdAt: u.created_at,
+          lastActiveAt: new Date().toISOString()
+        };
+        localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
+        document.dispatchEvent(new CustomEvent("auth-state-changed", {
+          detail: { loggedIn: true, user: profile }
+        }));
+      }
+    });
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const u = session.user;
+        const profile = {
+          id: u.id,
+          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'User',
+          email: u.email || '',
+          avatarUrl: u.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.id)}`,
+          authProvider: (u.app_metadata?.provider || 'email'),
+          createdAt: u.created_at,
+          lastActiveAt: new Date().toISOString()
+        };
+        localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
+        document.dispatchEvent(new CustomEvent("auth-state-changed", {
+          detail: { loggedIn: true, user: profile }
+        }));
+      } else if (event === 'SIGNED_OUT') {
+        document.dispatchEvent(new CustomEvent("auth-state-changed", {
+          detail: { loggedIn: false }
+        }));
+      }
+    });
+  }
 
   // Listen to open request
   document.addEventListener("open-auth-modal", openModal);
