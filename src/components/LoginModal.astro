@@ -8,17 +8,16 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="auth-modal-title"
-  aria-hidden="true"
 >
   <!-- Card Container -->
   <div class="glass w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-hairline/80 translate-y-4 transition-transform duration-300 ease-out" id="auth-modal-card">
     
     <!-- Tab Headers -->
-    <div class="flex border-b border-hairline" role="tablist" aria-label="Authentication">
-      <button type="button" id="tab-login" role="tab" aria-selected="true" aria-pressed="true" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink border-b-2 border-primary bg-white/[0.02]">
+    <div class="flex border-b border-hairline">
+      <button id="tab-login" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink border-b-2 border-primary bg-white/[0.02]" aria-pressed="true">
         Sign In
       </button>
-      <button type="button" id="tab-register" role="tab" aria-selected="false" aria-pressed="false" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink-subtle hover:text-ink border-b-2 border-transparent transition">
+      <button id="tab-register" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink-subtle hover:text-ink border-b-2 border-transparent transition" aria-pressed="false">
         Create Account
       </button>
     </div>
@@ -31,22 +30,19 @@
       </div>
 
       <!-- Error / Alert Message Banner -->
-      <div id="auth-error-banner" class="hidden px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans" role="alert">
+      <div id="auth-error-banner" class="hidden px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans">
         Invalid credentials. Please try again.
       </div>
 
       <!-- Main Form -->
-      <form id="auth-form" class="flex flex-col gap-4">
+      <form id="auth-form" class="flex flex-col gap-4" onsubmit="return false;">
         <!-- Username/Email Field -->
         <div class="flex flex-col gap-1.5">
           <label for="auth-email" class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Email Address</label>
           <input
             type="email"
             id="auth-email"
-            name="email"
             placeholder="name@example.com"
-            autocomplete="email"
-            spellcheck="false"
             required
             class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
           />
@@ -61,9 +57,7 @@
           <input
             type="password"
             id="auth-password"
-            name="password"
             placeholder="••••••••"
-            autocomplete="current-password"
             required
             class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
           />
@@ -93,7 +87,7 @@
 
       <!-- Social / OAuth Options -->
       <div class="grid grid-cols-2 gap-2">
-        <button type="button" id="auth-google-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
+        <button id="auth-google-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
           <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -102,7 +96,7 @@
           </svg>
           Google
         </button>
-        <button type="button" id="auth-github-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
+        <button id="auth-github-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
           <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
           </svg>
@@ -111,12 +105,12 @@
       </div>
 
       <!-- Demo Account Quick Button -->
-      <button type="button" id="auth-demo-btn" class="w-full py-3 px-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 text-xs font-semibold text-primary-hover hover:text-white transition cursor-pointer select-none">
+      <button id="auth-demo-btn" class="w-full py-3 px-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 text-xs font-semibold text-primary-hover hover:text-white transition cursor-pointer select-none">
         🚀 Sign In with Demo Account (Instant)
       </button>
 
       <!-- Footer Close Link -->
-      <button type="button" id="auth-close-link" class="text-[10px] text-ink-subtle hover:text-ink mt-1 transition cursor-pointer select-none">
+      <button id="auth-close-link" class="text-[10px] text-ink-subtle hover:text-ink mt-1 transition cursor-pointer select-none">
         Go Back to Study Space
       </button>
     </div>
@@ -125,8 +119,6 @@
 </div>
 
 <script>
-  import { supabase, isSupabaseConfigured } from "../lib/supabase";
-
   // Auth system states and visual handlers
   const authModal     = document.getElementById("auth-modal");
   const authModalCard = document.getElementById("auth-modal-card");
@@ -146,58 +138,24 @@
   const authDesc      = document.getElementById("auth-modal-desc");
 
   let isRegisterTab   = false;
-  let lastFocused: HTMLElement | null = null;
-
-  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
-
-  function showBanner(message: string, isError = true) {
-    if (!errorBanner) return;
-    errorBanner.textContent = message;
-    if (isError) {
-      errorBanner.className = "px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans";
-    } else {
-      errorBanner.className = "px-3.5 py-2.5 bg-primary/10 border border-primary/20 rounded-lg text-xs text-primary-hover font-sans";
-    }
-    errorBanner.classList.remove("hidden");
-  }
-
-  function hideBanner() {
-    errorBanner?.classList.add("hidden");
-  }
-
-  function openModal() {
-    hideBanner();
-    lastFocused = document.activeElement as HTMLElement | null;
-    authModal?.classList.remove("opacity-0", "pointer-events-none");
-    authModal?.removeAttribute("aria-hidden");
-    authModalCard?.classList.remove("translate-y-4");
-    // Move focus into the dialog
-    const emailField = document.getElementById("auth-email") as HTMLInputElement | null;
-    emailField?.focus();
-  }
 
   function closeModal() {
     authModal?.classList.add("opacity-0", "pointer-events-none");
-    authModal?.setAttribute("aria-hidden", "true");
     authModalCard?.classList.add("translate-y-4");
-    lastFocused?.focus?.();
-    lastFocused = null;
   }
 
   function switchTab(registerMode: boolean) {
     isRegisterTab = registerMode;
-    hideBanner();
+    errorBanner?.classList.add("hidden");
 
     if (isRegisterTab) {
       tabRegister.classList.add("border-primary", "bg-white/[0.02]");
       tabRegister.classList.remove("border-transparent", "text-ink-subtle");
       tabRegister.setAttribute("aria-pressed", "true");
-      tabRegister.setAttribute("aria-selected", "true");
 
       tabLogin.classList.remove("border-primary", "bg-white/[0.02]");
       tabLogin.classList.add("border-transparent", "text-ink-subtle");
       tabLogin.setAttribute("aria-pressed", "false");
-      tabLogin.setAttribute("aria-selected", "false");
 
       if (authTitle) authTitle.textContent = "Create an Account";
       if (authDesc) authDesc.textContent = "Save your setups, notes, streaks, and playlists.";
@@ -206,12 +164,10 @@
       tabLogin.classList.add("border-primary", "bg-white/[0.02]");
       tabLogin.classList.remove("border-transparent", "text-ink-subtle");
       tabLogin.setAttribute("aria-pressed", "true");
-      tabLogin.setAttribute("aria-selected", "true");
 
       tabRegister.classList.remove("border-primary", "bg-white/[0.02]");
       tabRegister.classList.add("border-transparent", "text-ink-subtle");
       tabRegister.setAttribute("aria-pressed", "false");
-      tabRegister.setAttribute("aria-selected", "false");
 
       if (authTitle) authTitle.textContent = "Welcome to StudyAesthetic";
       if (authDesc) authDesc.textContent = "Sync your layouts, statistics, and preferences across devices.";
@@ -222,244 +178,74 @@
   tabLogin?.addEventListener("click", () => switchTab(false));
   tabRegister?.addEventListener("click", () => switchTab(true));
   closeLink?.addEventListener("click", closeModal);
-
+  
   // Close on backdrop click
   authModal?.addEventListener("click", (e) => {
     if (e.target === authModal) closeModal();
   });
 
-  // Escape closes the dialog
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (!authModal?.classList.contains("pointer-events-none")) closeModal();
-  });
-
-  // Keep focus inside dialog
-  authModal?.addEventListener("keydown", (e) => {
-    if (e.key !== "Tab") return;
-    const items = Array.from(authModal.querySelectorAll<HTMLElement>(FOCUSABLE))
-      .filter(el => el.offsetParent !== null);
-    if (items.length === 0) return;
-    const first = items[0];
-    const last  = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  });
-
-  function setProfileAndNotify(profile: any) {
-    localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
-    try {
-      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
-      prefs.userId = profile.id;
-      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
-    } catch {}
-
-    closeModal();
-    document.dispatchEvent(new CustomEvent("auth-state-changed", {
-      detail: { loggedIn: true, user: profile }
-    }));
-  }
-
-  // Fallback demo/local action
-  function loginDemo(name: string, email: string, provider: 'anonymous' | 'email' | 'google' | 'github' | 'demo' = 'demo') {
+  // Handle Simulated Auth Actions
+  function loginUser(name: string, email: string, isDemo = false) {
     if (submitBtn) submitBtn.setAttribute("disabled", "true");
     spinner?.classList.remove("hidden");
-    if (submitText) submitText.textContent = "Signing In…";
+    if (submitText) submitText.textContent = isDemo ? "Synchronizing..." : (isRegisterTab ? "Signing Up..." : "Signing In...");
 
+    // Simulate network save latency of 1s
     setTimeout(() => {
       const userProfile = {
         id: `user-${Date.now()}`,
         name: name,
         email: email,
-        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
-        authProvider: provider,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`,
+        authProvider: isDemo ? 'anonymous' : 'email',
         createdAt: new Date().toISOString(),
         lastActiveAt: new Date().toISOString()
       };
 
+      // Set user profile state in localStorage
+      localStorage.setItem("sa_user_profile_v1", JSON.stringify(userProfile));
+
+      // Mock user preferences and sync default demo data if needed
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      prefs.userId = userProfile.id;
+      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+
+      // Reset submit state
       if (submitBtn) submitBtn.removeAttribute("disabled");
       spinner?.classList.add("hidden");
-      setProfileAndNotify(userProfile);
-    }, 800);
+      
+      closeModal();
+
+      // Dispatch auth change event so header and layouts update
+      document.dispatchEvent(new CustomEvent("auth-state-changed", {
+        detail: { loggedIn: true, user: userProfile }
+      }));
+    }, 1200);
   }
 
-  // Handle Form Submission (Supabase + Local fallback)
-  form?.addEventListener("submit", async (e) => {
+  form?.addEventListener("submit", (e) => {
     e.preventDefault();
-    hideBanner();
-
-    const emailInput = document.getElementById("auth-email") as HTMLInputElement;
-    const passwordInput = document.getElementById("auth-password") as HTMLInputElement;
-    const email = emailInput?.value.trim();
-    const password = passwordInput?.value;
-
-    if (!email || !password) return;
-
+    const email = (document.getElementById("auth-email") as HTMLInputElement).value;
     const emailName = email.split('@')[0];
     const name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-
-    if (submitBtn) submitBtn.setAttribute("disabled", "true");
-    spinner?.classList.remove("hidden");
-    if (submitText) submitText.textContent = isRegisterTab ? "Signing Up…" : "Signing In…";
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        if (isRegisterTab) {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: name,
-                name: name,
-              }
-            }
-          });
-
-          if (error) {
-            showBanner(error.message, true);
-            return;
-          }
-
-          if (data.user) {
-            if (data.session) {
-              const profile = {
-                id: data.user.id,
-                name: name,
-                email: data.user.email,
-                avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.id)}`,
-                authProvider: 'email',
-                createdAt: data.user.created_at,
-                lastActiveAt: new Date().toISOString()
-              };
-              setProfileAndNotify(profile);
-            } else {
-              showBanner("Account created! Please check your email to confirm your account.", false);
-            }
-          }
-        } else {
-          // Sign In
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-
-          if (error) {
-            showBanner(error.message, true);
-            return;
-          }
-
-          if (data.user) {
-            const profile = {
-              id: data.user.id,
-              name: data.user.user_metadata?.full_name || name,
-              email: data.user.email,
-              avatarUrl: data.user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(data.user.id)}`,
-              authProvider: 'email',
-              createdAt: data.user.created_at,
-              lastActiveAt: new Date().toISOString()
-            };
-            setProfileAndNotify(profile);
-          }
-        }
-      } catch (err: any) {
-        showBanner(err?.message || "Authentication error occurred.", true);
-      } finally {
-        if (submitBtn) submitBtn.removeAttribute("disabled");
-        spinner?.classList.add("hidden");
-        if (submitText) submitText.textContent = isRegisterTab ? "Sign Up" : "Sign In";
-      }
-    } else {
-      // Local demo fallback
-      loginDemo(name, email, 'email');
-    }
+    loginUser(name, email, false);
   });
 
-  // Demo Account Button
   demoBtn?.addEventListener("click", () => {
-    loginDemo("Aesthetic Scholar", "scholar@studyaesthetic.com", 'demo');
+    loginUser("Aesthetic Scholar", "scholar@studyaesthetic.com", true);
   });
 
-  // OAuth Google
-  googleBtn?.addEventListener("click", async () => {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) showBanner(error.message, true);
-    } else {
-      loginDemo("Google Explorer", "google.explorer@gmail.com", 'google');
-    }
+  googleBtn?.addEventListener("click", () => {
+    loginUser("Google Explorer", "google.explorer@gmail.com", true);
   });
 
-  // OAuth GitHub
-  githubBtn?.addEventListener("click", async () => {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: window.location.origin
-        }
-      });
-      if (error) showBanner(error.message, true);
-    } else {
-      loginDemo("GitHub Coder", "git.coder@github.com", 'github');
-    }
+  githubBtn?.addEventListener("click", () => {
+    loginUser("GitHub Coder", "git.coder@github.com", true);
   });
-
-  // Check Supabase session on initialization
-  if (isSupabaseConfigured && supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const u = session.user;
-        const profile = {
-          id: u.id,
-          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'User',
-          email: u.email || '',
-          avatarUrl: u.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.id)}`,
-          authProvider: (u.app_metadata?.provider || 'email'),
-          createdAt: u.created_at,
-          lastActiveAt: new Date().toISOString()
-        };
-        localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
-        document.dispatchEvent(new CustomEvent("auth-state-changed", {
-          detail: { loggedIn: true, user: profile }
-        }));
-      }
-    });
-
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const u = session.user;
-        const profile = {
-          id: u.id,
-          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'User',
-          email: u.email || '',
-          avatarUrl: u.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.id)}`,
-          authProvider: (u.app_metadata?.provider || 'email'),
-          createdAt: u.created_at,
-          lastActiveAt: new Date().toISOString()
-        };
-        localStorage.setItem("sa_user_profile_v1", JSON.stringify(profile));
-        document.dispatchEvent(new CustomEvent("auth-state-changed", {
-          detail: { loggedIn: true, user: profile }
-        }));
-      } else if (event === 'SIGNED_OUT') {
-        document.dispatchEvent(new CustomEvent("auth-state-changed", {
-          detail: { loggedIn: false }
-        }));
-      }
-    });
-  }
 
   // Listen to open request
-  document.addEventListener("open-auth-modal", openModal);
+  document.addEventListener("open-auth-modal", () => {
+    authModal?.classList.remove("opacity-0", "pointer-events-none");
+    authModalCard?.classList.remove("translate-y-4");
+  });
 </script>

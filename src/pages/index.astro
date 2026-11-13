@@ -18,9 +18,33 @@ import LoginModal from '../components/LoginModal.astro';
        on first user gesture to satisfy autoplay policy.
        ════════════════════════════════════════════════════════ -->
   <div id="bg-wrapper" class="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none animated-bg-fallback">
+
     <!-- Overlay vignette & blur -->
     <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/75 z-10 pointer-events-none"></div>
     <div class="absolute inset-0 bg-black/10 z-10 pointer-events-none"></div>
+
+    <!-- Video loading spinner (shown while iframe loads) -->
+    <div id="video-loading-overlay" class="hidden">
+      <div class="flex flex-col items-center gap-3">
+        <div class="video-spinner"></div>
+        <span class="text-xs text-ink-subtle font-sans">Loading space…</span>
+      </div>
+    </div>
+
+    <!-- Click-to-start overlay — satisfies browser autoplay policy -->
+    <div id="video-start-overlay">
+      <div class="flex flex-col items-center gap-4 text-center px-8">
+        <div class="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
+          <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-sans font-semibold text-ink text-base tracking-tight">Click to start your study space</p>
+          <p class="text-xs text-ink-subtle mt-1 font-sans">Background video + ambient sounds will play</p>
+        </div>
+      </div>
+    </div>
 
     <!-- YouTube Background Iframe (injected dynamically after gesture) -->
     <div
@@ -33,45 +57,9 @@ import LoginModal from '../components/LoginModal.astro';
   </div>
 
   <!-- ══════════════════════════════════════════════════════════
-       PROMPT LAYER — z-index 30
-       These overlays live OUTSIDE the background wrapper on purpose:
-       inside it they were covered by the foreground UI layer and
-       could never be clicked, so the "click to start" prompt was
-       dead UI. They now sit above the foreground (but below the
-       dock at z-100 and the widgets, which are raised to the front
-       by the widget manager).
-       ════════════════════════════════════════════════════════ -->
-
-  <!-- Video loading spinner (shown while iframe loads) -->
-  <div id="video-loading-overlay" class="hidden">
-    <div class="flex flex-col items-center gap-3">
-      <div class="video-spinner"></div>
-      <span class="text-xs text-ink-subtle font-sans">Loading space…</span>
-    </div>
-  </div>
-
-  <!-- Click-to-start overlay — satisfies browser autoplay policy -->
-  <div id="video-start-overlay">
-    <div class="flex flex-col items-center gap-4 text-center px-8">
-      <div class="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-        <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M8 5v14l11-7z"/>
-        </svg>
-      </div>
-      <div>
-        <p class="font-sans font-semibold text-ink text-base tracking-tight">Click to start your study space</p>
-        <p class="text-xs text-ink-subtle mt-1 font-sans">Background video + ambient sounds will play</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Backdrop behind the background-library drawer (click to close) -->
-  <div id="drawer-backdrop" aria-hidden="true"></div>
-
-  <!-- ══════════════════════════════════════════════════════════
        FOREGROUND UI LAYER — z-index 20
        ════════════════════════════════════════════════════════ -->
-  <div id="app-foreground" class="relative w-full h-full flex flex-col justify-between z-20 pointer-events-auto overflow-hidden">
+  <div class="relative w-full h-full flex flex-col justify-between z-20 pointer-events-auto overflow-hidden">
 
     <!-- ── Top Header ─────────────────────────────────────── -->
     <header id="app-header" class="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-gradient-to-b from-black/45 to-transparent transition-opacity duration-500 shrink-0">
@@ -115,7 +103,7 @@ import LoginModal from '../components/LoginModal.astro';
 
           <!-- Signed In User Menu (Hidden initially) -->
           <div id="user-profile-badge" class="hidden flex items-center gap-2 px-2 py-0.5 bg-white/5 border border-white/5 rounded-full hover:bg-white/10 transition cursor-pointer select-none">
-            <img id="user-avatar" class="w-5 h-5 rounded-full object-cover border border-white/10 bg-surface-3" alt="" width="20" height="20" />
+            <img id="user-avatar" class="w-5 h-5 rounded-full object-cover border border-white/10 bg-surface-3" src="" alt="avatar" />
             <span id="user-name" class="text-xs font-semibold text-ink-muted">Guest</span>
           </div>
 
@@ -153,7 +141,7 @@ import LoginModal from '../components/LoginModal.astro';
       <div class="dock-inner glass rounded-2xl py-4 px-2.5 flex flex-col items-center gap-3.5">
 
         <!-- Spaces Explorer -->
-        <button id="dock-btn-explore" class="dock-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Explore spaces" aria-expanded="false" aria-controls="spaces-drawer">
+        <button id="dock-btn-explore" class="dock-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Explore spaces">
           <div class="w-9 h-9 rounded-full bg-surface-2/80 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
             <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -258,10 +246,6 @@ import LoginModal from '../components/LoginModal.astro';
 </Layout>
 
 <script>
-  import { supabase, isSupabaseConfigured } from "../lib/supabase";
-  import { pushPreferencesToCloud, pullPreferencesFromCloud, pushStatsToCloud, pullStatsFromCloud } from "../lib/supabaseSync";
-  import { getPreferences, recalculateStats } from "../utils/UserStore";
-
   // ═══════════════════════════════════════════════════════════════════
   // WIDGET MANAGER — Precise transform-based drag system
   // ═══════════════════════════════════════════════════════════════════
@@ -271,12 +255,12 @@ import LoginModal from '../components/LoginModal.astro';
   // than the widget could reposition, it would escape the handle
   // bounding box and events would stop, causing snap/jump artifacts.
   //
-  // FIX: The handle captures the pointer (setPointerCapture), so every
-  // pointer event for that pointer ID is delivered to the handle no
-  // matter where the cursor is. The cursor-to-widget-corner offset is
-  // stored on pointerdown and reused on every move:
-  // position = cursor - offset. This guarantees the widget stays
-  // exactly under the cursor.
+  // FIX: Attach pointermove and pointerup to DOCUMENT, not the handle.
+  // Use setPointerCapture on the handle (still correct — capture routes
+  // all pointer events for that pointer ID to the handle regardless of
+  // where the cursor is). Store the cursor-to-widget-corner offset on
+  // mousedown and use it on every move: position = cursor - offset.
+  // This guarantees the widget stays exactly under the cursor.
   //
   // IFRAME FIX: Set pointer-events: none on the YouTube iframe during
   // drag via body.is-dragging selector in CSS. Iframes steal pointer
@@ -314,8 +298,8 @@ import LoginModal from '../components/LoginModal.astro';
       const user = localStorage.getItem("sa_user_profile_v1");
       if (user) {
         const parsed = JSON.parse(user);
-        // Demo accounts are real accounts — they get their own layout.
-        if (parsed.authProvider && parsed.authProvider !== 'anonymous') {
+        // Sync indicator only works for non-anonymous accounts
+        if (parsed.authProvider !== 'anonymous') {
           return `widget-positions-v4_${parsed.id}`;
         }
       }
@@ -341,46 +325,24 @@ import LoginModal from '../components/LoginModal.astro';
   // Cloud Saving Simulation Indicator
   let syncTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  // Accounts that stay on the local device only (anonymous + demo).
-  const LOCAL_ONLY_PROVIDERS = ["anonymous", "demo"];
-
-  function getCurrentUser(): any | null {
-    try {
-      const raw = localStorage.getItem("sa_user_profile_v1");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
+  function triggerCloudSync() {
+    const userProfileRaw = localStorage.getItem("sa_user_profile_v1");
+    if (!userProfileRaw) {
+      updateCloudSyncUI("local");
+      return;
     }
-  }
-
-  async function triggerCloudSync() {
-    const user = getCurrentUser();
-    if (!user || LOCAL_ONLY_PROVIDERS.includes(user.authProvider)) {
+    const user = JSON.parse(userProfileRaw);
+    if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
       updateCloudSyncUI("local");
       return;
     }
 
     updateCloudSyncUI("syncing");
 
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const prefs = getPreferences();
-        const stats = recalculateStats();
-        await Promise.allSettled([
-          pushPreferencesToCloud(user.id, prefs),
-          pushStatsToCloud(user.id, stats),
-        ]);
-        updateCloudSyncUI("saved");
-      } catch (err) {
-        console.warn("Cloud sync error:", err);
-        updateCloudSyncUI("saved");
-      }
-    } else {
-      if (syncTimeoutId) clearTimeout(syncTimeoutId);
-      syncTimeoutId = setTimeout(() => {
-        updateCloudSyncUI("saved");
-      }, 1200);
-    }
+    if (syncTimeoutId) clearTimeout(syncTimeoutId);
+    syncTimeoutId = setTimeout(() => {
+      updateCloudSyncUI("saved");
+    }, 1200);
   }
 
   function updateCloudSyncUI(state: "local" | "syncing" | "saved") {
@@ -391,17 +353,17 @@ import LoginModal from '../components/LoginModal.astro';
 
     if (state === "local") {
       indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/5 rounded-full text-[10px] font-sans font-medium text-ink-subtle select-none";
-      icon.className = "w-3.5 h-3.5 text-ink-subtle shrink-0";
+      icon.setAttribute("class", "w-3.5 h-3.5 text-ink-subtle shrink-0");
       icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>`;
       text.textContent = "Local Only";
     } else if (state === "syncing") {
       indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-[10px] font-sans font-medium text-primary select-none animate-pulse";
-      icon.className = "w-3.5 h-3.5 text-primary shrink-0";
+      icon.setAttribute("class", "w-3.5 h-3.5 text-primary shrink-0");
       icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 12H19c0-.213.017-.422.05-.63M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>`;
       text.textContent = "Syncing...";
     } else if (state === "saved") {
       indicator.className = "flex items-center gap-1.5 px-2.5 py-1 bg-semantic-success/10 border border-semantic-success/20 rounded-full text-[10px] font-sans font-medium text-semantic-success select-none";
-      icon.className = "w-3.5 h-3.5 text-semantic-success shrink-0";
+      icon.setAttribute("class", "w-3.5 h-3.5 text-semantic-success shrink-0");
       icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>`;
       text.textContent = "Saved to Cloud";
     }
@@ -420,18 +382,9 @@ import LoginModal from '../components/LoginModal.astro';
     const vpH = workspace.clientHeight;
     const w   = el.offsetWidth  || 300;
     const h   = Math.min(el.scrollHeight || 400, vpH - WIDGET_MARGIN * 2);
-
-    // Keep the whole widget on screen when it fits, otherwise keep at
-    // least MIN_VISIBLE pixels of it reachable — otherwise a widget can
-    // be dragged almost entirely out of the viewport and lost.
-    const MIN_VISIBLE = 120;
-    const maxY = (h < vpH - WIDGET_MARGIN * 2)
-      ? vpH - h - WIDGET_MARGIN
-      : Math.max(WIDGET_MARGIN, vpH - MIN_VISIBLE);
-
     return {
       x: Math.max(DOCK_WIDTH + WIDGET_MARGIN, Math.min(vpW - w - WIDGET_MARGIN, x)),
-      y: Math.max(WIDGET_MARGIN, Math.min(maxY, y)),
+      y: Math.max(WIDGET_MARGIN, Math.min(vpH - 60, y)),
     };
   }
 
@@ -608,6 +561,7 @@ import LoginModal from '../components/LoginModal.astro';
       const workspace = document.getElementById("workspace");
       if (workspace) {
         const vpW = workspace.clientWidth;
+        const vpH = workspace.clientHeight;
         const w   = el.offsetWidth;
 
         // Snap to left dock edge
@@ -628,7 +582,7 @@ import LoginModal from '../components/LoginModal.astro';
       applyPosition(el, x, y);
     });
 
-    handle.addEventListener("pointerup", () => {
+    handle.addEventListener("pointerup", (e: PointerEvent) => {
       if (!activeDrag || activeDrag.el !== el) return;
 
       if (activeDrag.isDragging) {
@@ -705,47 +659,13 @@ import LoginModal from '../components/LoginModal.astro';
     });
   }
 
-  // ── Spaces drawer ──────────────────────────────────────────────
-  // Single source of truth for the drawer state: the class, the
-  // backdrop and the button's aria-expanded are always updated
-  // together.
-  function setDrawerOpen(open: boolean) {
-    const drawer   = document.getElementById("spaces-drawer");
-    const backdrop = document.getElementById("drawer-backdrop");
-    const btn      = document.getElementById("dock-btn-explore");
-
-    drawer?.classList.toggle("-translate-x-full", !open);
-    backdrop?.classList.toggle("is-open", open);
-    btn?.setAttribute("aria-expanded", open ? "true" : "false");
-    drawer?.setAttribute("aria-hidden", open ? "false" : "true");
-
-    // Let the drawer move focus into itself when it opens
-    document.dispatchEvent(new CustomEvent("drawer-state", { detail: { open } }));
-  }
-
-  document.getElementById("dock-btn-explore")?.addEventListener("click", () => {
-    const drawer = document.getElementById("spaces-drawer");
-    const isOpen = drawer ? !drawer.classList.contains("-translate-x-full") : false;
-    setDrawerOpen(!isOpen);
-  });
-
-  // The drawer component and the backdrop both close via this event
-  document.addEventListener("close-drawer", () => setDrawerOpen(false));
-  document.getElementById("drawer-backdrop")?.addEventListener("click", () => setDrawerOpen(false));
-
   // ── Keyboard shortcuts ─────────────────────────────────────────
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-
-    const drawer = document.getElementById("spaces-drawer");
-    if (drawer && !drawer.classList.contains("-translate-x-full")) {
-      setDrawerOpen(false);
-      return;
-    }
-
-    // Escape also leaves focus mode — there was no keyboard way out.
-    if (document.body.classList.contains("focus-mode")) {
-      exitFocus();
+    if (e.key === "Escape") {
+      const drawer = document.getElementById("spaces-drawer");
+      if (drawer && !drawer.classList.contains("-translate-x-full")) {
+        drawer.classList.add("-translate-x-full");
+      }
     }
   });
 
@@ -759,8 +679,14 @@ import LoginModal from '../components/LoginModal.astro';
   setInterval(updateClock, 1000);
   updateClock();
 
+  // ── Spaces drawer ──────────────────────────────────────────────
+  document.getElementById("dock-btn-explore")?.addEventListener("click", () => {
+    document.getElementById("spaces-drawer")?.classList.toggle("-translate-x-full");
+  });
+
   // ── Focus mode ─────────────────────────────────────────────────
-  const exitFocusBtn = document.getElementById("exit-focus-btn");  function enterFocus() {
+  const exitFocusBtn = document.getElementById("exit-focus-btn");
+  function enterFocus() {
     document.body.classList.add("focus-mode");
     exitFocusBtn?.classList.remove("hidden");
     document.getElementById("app-dock-container")?.classList.add("dock-hidden");
@@ -786,7 +712,6 @@ import LoginModal from '../components/LoginModal.astro';
   let currentVideoId = "hBGwt25cJRY"; // Default: Lo-Fi Cafe
   let isVideoPlaying = false;
   let playerIframe: HTMLIFrameElement | null = null;
-  let customVideoEl: HTMLVideoElement | null = null;
 
   const startOverlay   = document.getElementById("video-start-overlay");
   const loadingOverlay = document.getElementById("video-loading-overlay");
@@ -807,9 +732,6 @@ import LoginModal from '../components/LoginModal.astro';
   function injectPlayer(videoId: string) {
     if (!playerWrap) return;
 
-    // Tear down any custom uploaded video before switching back to YouTube
-    removeCustomVideo();
-
     // Show loading state
     loadingOverlay?.classList.remove("hidden");
 
@@ -820,12 +742,10 @@ import LoginModal from '../components/LoginModal.astro';
     const iframe = document.createElement("iframe");
     iframe.id          = "bg-player";
     iframe.src         = buildYouTubeUrl(videoId);
-    iframe.setAttribute("frameborder", "0");
-    iframe.setAttribute("style", "border:0");
+    iframe.frameBorder = "0";
     iframe.allow       = "autoplay; encrypted-media";
     iframe.className   = "w-full h-full pointer-events-none select-none";
     iframe.setAttribute("aria-hidden", "true");
-    iframe.setAttribute("loading", "eager");
 
     iframe.addEventListener("load", () => {
       // Hide loading overlay after iframe loads
@@ -839,7 +759,7 @@ import LoginModal from '../components/LoginModal.astro';
     isVideoPlaying = true;
 
     if (spaceLiveDot) {
-      spaceLiveDot.classList.remove("bg-surface-3", "bg-primary");
+      spaceLiveDot.classList.remove("bg-surface-3");
       spaceLiveDot.classList.add("bg-semantic-success", "animate-ping");
     }
   }
@@ -854,29 +774,6 @@ import LoginModal from '../components/LoginModal.astro';
     } catch {}
   }
 
-  // ── Static image background helpers ────────────────────────────
-  function applyStaticBackground(url: string) {
-    if (!bgWrapper) return;
-    bgWrapper.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
-    bgWrapper.style.backgroundSize  = "cover";
-    bgWrapper.style.backgroundPosition = "center";
-    bgWrapper.classList.remove("animated-bg-fallback");
-  }
-
-  function clearStaticBackground() {
-    if (!bgWrapper) return;
-    bgWrapper.style.backgroundImage = "";
-    bgWrapper.classList.add("animated-bg-fallback");
-  }
-
-  function removeCustomVideo() {
-    if (customVideoEl) {
-      customVideoEl.pause();
-      customVideoEl.remove();
-      customVideoEl = null;
-    }
-  }
-
   // Start overlay click — first user gesture satisfies autoplay policy
   startOverlay?.addEventListener("click", () => {
     startOverlay.classList.add("hidden");
@@ -887,35 +784,12 @@ import LoginModal from '../components/LoginModal.astro';
 
   // Video play/pause toggle
   videoPlayBtn?.addEventListener("click", () => {
-    // Custom uploaded video takes priority — the YouTube iframe may
-    // not even exist in that mode.
-    if (customVideoEl) {
-      isVideoPlaying = !isVideoPlaying;
-      if (isVideoPlaying) customVideoEl.play().catch(() => {});
-      else customVideoEl.pause();
-      if (playVideoIcon) playVideoIcon.innerHTML = isVideoPlaying ? PAUSE_SVG : PLAY_SVG;
-      return;
-    }
-
     if (!playerIframe) {
       // Player not yet started — trigger start
       startOverlay?.classList.add("hidden");
       injectPlayer(currentVideoId);
-      if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
       return;
     }
-
-    // A static image is currently covering the video — restore the
-    // video instead of toggling play/pause on a hidden iframe.
-    if (playerIframe.style.display === "none") {
-      clearStaticBackground();
-      playerIframe.style.display = "";
-      isVideoPlaying = true;
-      controlYT("playVideo");
-      if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
-      return;
-    }
-
     isVideoPlaying = !isVideoPlaying;
     controlYT(isVideoPlaying ? "playVideo" : "pauseVideo");
     if (playVideoIcon) playVideoIcon.innerHTML = isVideoPlaying ? PAUSE_SVG : PLAY_SVG;
@@ -927,11 +801,6 @@ import LoginModal from '../components/LoginModal.astro';
     currentVideoId = videoId;
 
     if (spaceTitleEl && title) spaceTitleEl.textContent = title;
-
-    // Switching back to a video space must clear a previously applied
-    // static image, otherwise the image keeps showing behind the
-    // (transparent) YouTube player.
-    clearStaticBackground();
 
     if (playerIframe) {
       // Player is running — switch video
@@ -955,55 +824,36 @@ import LoginModal from '../components/LoginModal.astro';
 
     if (type === "image") {
       // Static image background — hide YouTube player, show image
-      removeCustomVideo();
       if (playerIframe) {
         playerIframe.style.display = "none";
       }
-      applyStaticBackground(url);
+      if (bgWrapper) {
+        bgWrapper.style.backgroundImage = `url('${url}')`;
+        bgWrapper.style.backgroundSize  = "cover";
+        bgWrapper.style.backgroundPosition = "center";
+        bgWrapper.classList.remove("animated-bg-fallback");
+      }
       if (spaceTitleEl) spaceTitleEl.textContent = title;
       if (spaceLiveDot) {
-        spaceLiveDot.classList.remove("bg-semantic-success", "animate-ping", "bg-surface-3");
+        spaceLiveDot.classList.remove("bg-semantic-success", "animate-ping");
         spaceLiveDot.classList.add("bg-primary");
       }
       // Dismiss start overlay if present
       startOverlay?.classList.add("hidden");
-    } else if (type === "video" || type === "direct_video") {
+    } else if (type === "video") {
       // Custom uploaded video
-      clearStaticBackground();
-      removeCustomVideo();
-      if (playerIframe) {
-        playerIframe.style.display = "none";
-      }
+      if (bgWrapper) bgWrapper.style.backgroundImage = "";
       if (playerWrap) {
         const vid = document.createElement("video");
         vid.src       = url;
         vid.autoplay  = true;
         vid.loop      = true;
         vid.muted     = true;
-        vid.playsInline = true;
         vid.className = "w-full h-full object-cover pointer-events-none";
-        vid.addEventListener("play",  () => { isVideoPlaying = true;  if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG; });
-        vid.addEventListener("pause", () => { isVideoPlaying = false; if (playVideoIcon) playVideoIcon.innerHTML = PLAY_SVG; });
         playerWrap.innerHTML = "";
         playerWrap.appendChild(vid);
-        customVideoEl = vid;
-        vid.play().catch(() => {});
       }
       if (spaceTitleEl) spaceTitleEl.textContent = title;
-      if (spaceLiveDot) {
-        spaceLiveDot.classList.remove("bg-surface-3", "bg-primary");
-        spaceLiveDot.classList.add("bg-semantic-success", "animate-ping");
-      }
-      isVideoPlaying = true;
-      if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
-      startOverlay?.classList.add("hidden");
-    } else if (type === "youtube") {
-      // Switch back to a YouTube space
-      clearStaticBackground();
-      currentVideoId = url;
-      injectPlayer(url);
-      if (spaceTitleEl) spaceTitleEl.textContent = title;
-      if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
       startOverlay?.classList.add("hidden");
     }
 
@@ -1011,7 +861,7 @@ import LoginModal from '../components/LoginModal.astro';
     try {
       const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
       prefs.selectedBackground     = id;
-      prefs.selectedBackgroundType = type === "direct_video" ? "video" : type;
+      prefs.selectedBackgroundType = type;
       localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
     } catch {}
   });
@@ -1062,10 +912,8 @@ import LoginModal from '../components/LoginModal.astro';
       }
       const user = JSON.parse(rawUser);
 
-      // Only a truly anonymous profile counts as signed out. Google /
-      // GitHub / email / demo accounts are all real accounts — treating
-      // them as anonymous made those sign-in buttons look like no-ops.
-      if (!user.authProvider || user.authProvider === "anonymous") {
+      // Anonymous accounts are treated as signed out for cloud sync/dropdown functions
+      if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
         showSignedOutUI();
       } else {
         showSignedInUI(user);
@@ -1079,20 +927,16 @@ import LoginModal from '../components/LoginModal.astro';
     btnLoginTrigger?.classList.remove("hidden");
     userProfileBadge?.classList.add("hidden");
     userDropdownMenu?.classList.add("hidden");
-    userDropdownMenu?.classList.remove("flex");
     updateCloudSyncUI("local");
   }
 
   function showSignedInUI(user: any) {
     btnLoginTrigger?.classList.add("hidden");
     userProfileBadge?.classList.remove("hidden");
-    if (userAvatar) {
-      userAvatar.src = user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name || "guest")}`;
-      userAvatar.alt = `${user.name || "User"} avatar`;
-    }
-    if (userName) userName.textContent = (user.name || "Guest").split(' ')[0];
+    if (userAvatar) userAvatar.src = user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.name}`;
+    if (userName) userName.textContent = user.name.split(' ')[0];
     if (dropdownEmail) dropdownEmail.textContent = user.email || "guest@studyaesthetic.com";
-    updateCloudSyncUI(LOCAL_ONLY_PROVIDERS.includes(user.authProvider) ? "local" : "saved");
+    updateCloudSyncUI("saved");
   }
 
   // Click login button to trigger modal open
@@ -1114,15 +958,7 @@ import LoginModal from '../components/LoginModal.astro';
   });
 
   // Sign out handler
-  btnSignOut?.addEventListener("click", async () => {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.warn("Sign out error:", err);
-      }
-    }
-
+  btnSignOut?.addEventListener("click", () => {
     // Revert user profile back to anonymous default
     const anonProfile = {
       id:           `user-anon-${Date.now()}`,
@@ -1141,31 +977,12 @@ import LoginModal from '../components/LoginModal.astro';
   });
 
   // Listen to auth state changes from LoginModal
-  document.addEventListener("auth-state-changed", async (e: any) => {
+  document.addEventListener("auth-state-changed", (e: any) => {
     syncAuthUI();
+    // Reload layouts for the new scoped user
     initWidgets();
-
-    if (e.detail?.loggedIn && e.detail?.user?.id && !LOCAL_ONLY_PROVIDERS.includes(e.detail.user.authProvider)) {
-      updateCloudSyncUI("syncing");
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const [remotePrefs, remoteStats] = await Promise.all([
-            pullPreferencesFromCloud(e.detail.user.id),
-            pullStatsFromCloud(e.detail.user.id),
-          ]);
-          if (remotePrefs) {
-            const current = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
-            localStorage.setItem("sa_user_prefs_v1", JSON.stringify({ ...current, ...remotePrefs }));
-          }
-          if (remoteStats) {
-            const current = JSON.parse(localStorage.getItem("sa_stats_v1") || "{}");
-            localStorage.setItem("sa_stats_v1", JSON.stringify({ ...current, ...remoteStats }));
-          }
-          initWidgets();
-        } catch (err) {
-          console.warn("Error pulling cloud data on login:", err);
-        }
-      }
+    // Show a sync completed indicator
+    if (e.detail.loggedIn) {
       triggerCloudSync();
     }
   });

@@ -20,10 +20,10 @@
     </div>
     <div class="flex items-center gap-1.5">
       <!-- Tab switcher -->
-      <div class="flex gap-0.5 bg-surface-2/60 rounded-md p-0.5 border border-hairline" role="tablist" aria-label="Statistics views">
-        <button id="stats-tab-overview" class="stats-tab active-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" role="tab" aria-selected="true" aria-controls="stats-panel-overview">Overview</button>
-        <button id="stats-tab-heatmap" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" role="tab" aria-selected="false" aria-controls="stats-panel-heatmap">Activity</button>
-        <button id="stats-tab-achievements" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" role="tab" aria-selected="false" aria-controls="stats-panel-achievements">Badges</button>
+      <div class="flex gap-0.5 bg-surface-2/60 rounded-md p-0.5 border border-hairline">
+        <button id="stats-tab-overview" class="stats-tab active-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="true">Overview</button>
+        <button id="stats-tab-heatmap" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="false">Activity</button>
+        <button id="stats-tab-achievements" class="stats-tab px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer" aria-pressed="false">Badges</button>
       </div>
       <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize stats widget">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -37,7 +37,7 @@
   <div class="widget-body px-4 pb-4 pt-3 flex flex-col">
 
     <!-- ── Overview Tab ───────────────────────────────── -->
-    <div id="stats-panel-overview" class="stats-panel" role="tabpanel" aria-labelledby="stats-tab-overview">
+    <div id="stats-panel-overview" class="stats-panel">
 
       <!-- Today's streak banner -->
       <div id="streak-banner" class="flex items-center gap-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg mb-3 hidden">
@@ -117,7 +117,7 @@
     </div>
 
     <!-- ── Activity Heatmap Tab ──────────────────────────── -->
-    <div id="stats-panel-heatmap" class="stats-panel hidden" role="tabpanel" aria-labelledby="stats-tab-heatmap">
+    <div id="stats-panel-heatmap" class="stats-panel hidden">
       <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-2">7-Day Activity</p>
 
       <!-- Day labels -->
@@ -143,7 +143,7 @@
     </div>
 
     <!-- ── Achievements Tab ──────────────────────────────── -->
-    <div id="stats-panel-achievements" class="stats-panel hidden" role="tabpanel" aria-labelledby="stats-tab-achievements">
+    <div id="stats-panel-achievements" class="stats-panel hidden">
       <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-3">
         Achievements <span id="badge-count" class="text-primary"></span>
       </p>
@@ -177,55 +177,33 @@
 </style>
 
 <script>
-  import { getStats, getDailyActivity } from '../utils/UserStore';
-
   // ── Minimize ────────────────────────────────────────────────────
   const widget      = document.getElementById("stats-widget");
   const minimizeBtn = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    const minimized = widget?.classList.toggle("is-minimized");
-    minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
-    minimizeBtn.setAttribute("aria-label", minimized ? "Expand stats widget" : "Minimize stats widget");
+    widget?.classList.toggle("is-minimized");
   });
 
   // ── Tab system ──────────────────────────────────────────────────
   const tabs   = widget?.querySelectorAll<HTMLButtonElement>(".stats-tab") ?? [];
   const panels = widget?.querySelectorAll<HTMLElement>(".stats-panel") ?? [];
 
-  function activateTab(tab: HTMLButtonElement) {
-    const id = tab.id.replace("stats-tab-", "stats-panel-");
-    tabs.forEach(t => {
-      const isActive = t === tab;
-      t.classList.toggle("active-tab", isActive);
-      t.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    panels.forEach(p => p.classList.add("hidden"));
-    document.getElementById(id)?.classList.remove("hidden");
-    if (id === "stats-panel-heatmap") renderHeatmap();
-    if (id === "stats-panel-achievements") renderAchievements();
-    if (id === "stats-panel-overview") renderOverview();
-  }
-
   tabs.forEach(tab => {
-    tab.addEventListener("click", () => activateTab(tab));
-    // Arrow-key navigation between tabs
-    tab.addEventListener("keydown", (e) => {
-      const idx = Array.from(tabs).indexOf(tab);
-      let next = -1;
-      if (e.key === "ArrowRight") next = (idx + 1) % tabs.length;
-      if (e.key === "ArrowLeft")  next = (idx - 1 + tabs.length) % tabs.length;
-      if (next >= 0) {
-        e.preventDefault();
-        (tabs[next] as HTMLButtonElement).focus();
-        activateTab(tabs[next]);
-      }
+    tab.addEventListener("click", () => {
+      const id = tab.id.replace("stats-tab-", "stats-panel-");
+      tabs.forEach(t => { t.classList.remove("active-tab"); t.setAttribute("aria-pressed", "false"); });
+      panels.forEach(p => p.classList.add("hidden"));
+      tab.classList.add("active-tab");
+      tab.setAttribute("aria-pressed", "true");
+      document.getElementById(id)?.classList.remove("hidden");
+      if (id === "stats-panel-heatmap") renderHeatmap();
+      if (id === "stats-panel-achievements") renderAchievements();
     });
   });
 
   // ── Time formatting ─────────────────────────────────────────────
   function fmtSeconds(secs: number): string {
-    if (!secs || secs <= 0) return "0m";
     if (secs < 60)   return `${secs}s`;
     if (secs < 3600) return `${Math.floor(secs / 60)}m`;
     const h = Math.floor(secs / 3600);
@@ -234,17 +212,49 @@
   }
 
   // ── Load + render stats ─────────────────────────────────────────
+  interface StudyStats {
+    totalFocusSeconds:      number;
+    todayFocusSeconds:      number;
+    weekFocusSeconds:       number;
+    totalSessionsCompleted: number;
+    avgSessionDuration:     number;
+    longestSession:         number;
+    currentStreak:          number;
+    longestStreak:          number;
+    achievements:           string[];
+  }
+
   interface ActivityDay {
     date:         string;
     focusMinutes: number;
     sessionsCompleted: number;
   }
 
+  function getStats(): StudyStats | null {
+    try {
+      const raw = localStorage.getItem("sa_stats_v1");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function getActivity(days = 7): ActivityDay[] {
+    try {
+      const raw      = localStorage.getItem("sa_activity_v1");
+      const activity = raw ? JSON.parse(raw) : {};
+      const result: ActivityDay[] = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const d   = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split("T")[0];
+        result.push(activity[key] || { date: key, focusMinutes: 0, sessionsCompleted: 0 });
+      }
+      return result;
+    } catch { return []; }
+  }
+
   function renderOverview() {
-    // getStats() recomputes from the stored sessions when the cached
-    // snapshot is missing or stale — the widget used to render "0m"
-    // for anyone who had not finished a session since the last reload.
     const stats = getStats();
+    if (!stats) return;
 
     const todayEl    = document.getElementById("stat-today");
     const weekEl     = document.getElementById("stat-week");
@@ -265,13 +275,11 @@
     if (stats.currentStreak > 0 && streakBn && streakTxt) {
       streakBn.classList.remove("hidden");
       streakTxt.textContent = `${stats.currentStreak} day${stats.currentStreak > 1 ? "s" : ""} streak`;
-    } else {
-      streakBn?.classList.add("hidden");
     }
   }
 
   function renderHeatmap() {
-    const data       = getDailyActivity(7) as ActivityDay[];
+    const data       = getActivity(7);
     const labelsEl   = document.getElementById("heatmap-labels");
     const gridEl     = document.getElementById("heatmap-grid");
     const barChartEl = document.getElementById("bar-chart");
@@ -304,7 +312,6 @@
       cell.className = "heatmap-cell";
       if (level > 0) cell.setAttribute("data-level", level.toString());
       cell.title = `${day.date}: ${mins}m`;
-      cell.setAttribute("aria-label", `${day.date}: ${mins} minutes of focus`);
       gridEl.appendChild(cell);
 
       // Bar
@@ -361,24 +368,17 @@
         : "bg-surface-2/40 border-hairline locked"}`;
       badge.title = a.desc;
       badge.setAttribute("aria-label", `${a.title}: ${isUnlocked ? "Unlocked" : "Locked"}`);
-
-      const icon = document.createElement("span");
-      icon.className = "text-xl";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = a.icon;
-
-      const label = document.createElement("span");
-      label.className = `text-[9px] font-semibold leading-tight ${isUnlocked ? "text-ink" : "text-ink-subtle"}`;
-      label.textContent = a.title;
-
-      badge.appendChild(icon);
-      badge.appendChild(label);
+      badge.innerHTML = `
+        <span class="text-xl" aria-hidden="true">${a.icon}</span>
+        <span class="text-[9px] font-semibold leading-tight ${isUnlocked ? "text-ink" : "text-ink-subtle"}">${a.title}</span>
+      `;
       gridEl.appendChild(badge);
     });
   }
 
   // ── Listen for session complete events from TimerWidget ──────────
-  document.addEventListener("study-session-complete", () => {
+  document.addEventListener("study-session-complete", (e: any) => {
+    // Re-render overview after a session completes
     setTimeout(renderOverview, 100);
   });
 

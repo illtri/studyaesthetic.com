@@ -64,8 +64,6 @@
 </div>
 
 <script>
-  import { showToast } from '../utils/toast';
-
   interface Note { id: string; title: string; content: string; }
   let notes: Note[] = [];
   let activeNoteId: string | null = null;
@@ -74,9 +72,7 @@
   const minimizeBtn   = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    const minimized = widget?.classList.toggle("is-minimized");
-    minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
-    minimizeBtn.setAttribute("aria-label", minimized ? "Expand notes widget" : "Minimize notes widget");
+    widget?.classList.toggle("is-minimized");
   });
 
   const tabsContainer   = document.getElementById("notes-tabs");
@@ -87,51 +83,23 @@
   const addNoteBtn      = document.getElementById("add-note-btn");
   const deleteNoteBtn   = document.getElementById("delete-note-btn");
 
-  // Guard against corrupted storage — a bad value used to throw here
-  // and prevent the rest of the widget from initialising.
-  try {
-    const stored = localStorage.getItem("study-notes");
-    const parsed = stored ? JSON.parse(stored) : [];
-    if (Array.isArray(parsed)) {
-      notes = parsed.filter(n => n && typeof n.id === "string");
-      if (notes.length > 0) activeNoteId = notes[0].id;
-    }
-  } catch {
-    notes = [];
+  const stored = localStorage.getItem("study-notes");
+  if (stored) {
+    notes = JSON.parse(stored);
+    if (notes.length > 0) activeNoteId = notes[0].id;
+    renderNotes();
   }
-  renderNotes();
 
   addNoteBtn?.addEventListener("click", () => {
-    const n: Note = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, title: `Draft ${notes.length + 1}`, content: "" };
+    const n: Note = { id: Date.now().toString(), title: `Draft ${notes.length + 1}`, content: "" };
     notes.push(n); activeNoteId = n.id; saveNotes(); renderNotes();
-    titleInput?.focus();
   });
-
   deleteNoteBtn?.addEventListener("click", () => {
     if (!activeNoteId) return;
-    const index = notes.findIndex(n => n.id === activeNoteId);
-    if (index < 0) return;
-
-    // Destructive action — give the user a way back.
-    const removed = notes.splice(index, 1)[0];
-    activeNoteId = notes.length > 0
-      ? notes[Math.min(index, notes.length - 1)].id
-      : null;
+    notes = notes.filter(n => n.id !== activeNoteId);
+    activeNoteId = notes.length > 0 ? notes[0].id : null;
     saveNotes(); renderNotes();
-
-    showToast("Note deleted", {
-      duration: 6000,
-      action: {
-        label: "Undo",
-        onClick: () => {
-          notes.splice(index, 0, removed);
-          activeNoteId = removed.id;
-          saveNotes(); renderNotes();
-        },
-      },
-    });
   });
-
   titleInput?.addEventListener("input", () => {
     const note = notes.find(n => n.id === activeNoteId);
     if (note) { note.title = titleInput.value; saveNotes(); updateActiveTabTitle(); }
@@ -141,9 +109,7 @@
     if (note) { note.content = contentInput.value; saveNotes(); }
   });
 
-  function saveNotes() {
-    try { localStorage.setItem("study-notes", JSON.stringify(notes)); } catch {}
-  }
+  function saveNotes() { localStorage.setItem("study-notes", JSON.stringify(notes)); }
   function updateActiveTabTitle() {
     if (!activeNoteId || !tabsContainer) return;
     const tab = tabsContainer.querySelector(`[data-id="${activeNoteId}"]`) as HTMLElement;
@@ -158,18 +124,13 @@
     noNotesMsg?.classList.add("hidden"); noteEditor?.classList.remove("hidden");
     notes.forEach(note => {
       const tab = document.createElement("button");
-      tab.type = "button";
       tab.className = `px-2.5 py-1 text-[10px] font-semibold border rounded-md cursor-pointer transition shrink-0 ${note.id === activeNoteId ? "bg-primary/20 text-primary border-primary/40" : "bg-surface-2 text-ink-subtle border-hairline hover:text-ink hover:bg-surface-3"}`;
       tab.setAttribute("data-id", note.id);
-      tab.setAttribute("aria-pressed", note.id === activeNoteId ? "true" : "false");
       tab.textContent = note.title || "Untitled";
       tab.addEventListener("click", () => { activeNoteId = note.id; renderNotes(); });
       tabsContainer.appendChild(tab);
     });
     const active = notes.find(n => n.id === activeNoteId);
-    if (active) {
-      if (titleInput)   titleInput.value = active.title;
-      if (contentInput) contentInput.value = active.content;
-    }
+    if (active) { titleInput.value = active.title; contentInput.value = active.content; }
   }
 </script>

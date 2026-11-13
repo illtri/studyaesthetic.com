@@ -32,13 +32,13 @@
   <div class="widget-body px-4 pb-4 pt-4 flex flex-col items-center">
     <!-- Mode Selectors -->
     <div class="flex gap-1 p-1 bg-surface-2/60 border border-hairline rounded-lg w-full mb-5">
-      <button id="mode-pomodoro" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium bg-primary text-white cursor-pointer transition" data-time="1500" aria-pressed="true">
+      <button id="mode-pomodoro" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium bg-primary text-white cursor-pointer transition" data-time="1500">
         Pomodoro
       </button>
-      <button id="mode-short" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="300" aria-pressed="false">
+      <button id="mode-short" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="300">
         Short Break
       </button>
-      <button id="mode-long" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="900" aria-pressed="false">
+      <button id="mode-long" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="900">
         Long Break
       </button>
     </div>
@@ -60,13 +60,10 @@
         />
       </svg>
       <div class="absolute flex flex-col items-center justify-center">
-        <span id="timer-display" class="font-mono text-3xl font-bold tracking-tight text-ink" role="timer">25:00</span>
+        <span id="timer-display" class="font-mono text-3xl font-bold tracking-tight text-ink" aria-live="polite" aria-atomic="true">25:00</span>
         <span id="timer-status" class="text-[10px] text-ink-subtle font-sans tracking-wide uppercase mt-1">Focusing</span>
       </div>
     </div>
-
-    <!-- Screen-reader announcements for phase changes -->
-    <p id="timer-announcer" class="sr-only" role="status" aria-live="polite"></p>
 
     <!-- Controls -->
     <div class="flex items-center gap-3 w-full">
@@ -84,28 +81,17 @@
 </div>
 
 <script>
-  import { recordSession } from '../utils/UserStore';
-  import { showToast } from '../utils/toast';
-
   // ── Timer state ─────────────────────────────────────────────────
   type TimerMode = "pomodoro" | "short" | "long";
-
-  let timeLeft      = 1500;
-  let totalTime     = 1500;
+  let timeLeft    = 1500;
+  let totalTime   = 1500;
   let currentMode: TimerMode = "pomodoro";
+  let sessionStartTime: number | null = null;
   let timerId: ReturnType<typeof setInterval> | null = null;
-  let isRunning     = false;
-
-  // Wall-clock bookkeeping. The countdown is derived from a target
-  // timestamp instead of counting ticks, so the timer stays accurate
-  // even when the browser throttles timers in a background tab.
-  let endAt         = 0;        // ms timestamp when the countdown hits 0
-  let sessionStart  = 0;        // ms timestamp of the current running segment
-  let accumulated   = 0;        // seconds focused in previous segments
+  let isRunning = false;
 
   const display       = document.getElementById("timer-display");
   const statusDisplay = document.getElementById("timer-status");
-  const announcer     = document.getElementById("timer-announcer");
   const startBtn      = document.getElementById("timer-start");
   const resetBtn      = document.getElementById("timer-reset");
   const startText     = document.getElementById("start-text");
@@ -114,76 +100,132 @@
   const modeButtons   = document.querySelectorAll(".timer-mode-btn");
   const ringCircumference = 502.65;
 
-  const MODE_LABELS: Record<TimerMode, { status: string; done: string; doneBreak: string }> = {
-    pomodoro: { status: "Focusing", done: "Focus session complete!", doneBreak: "Break finished!" },
-    short:    { status: "Short break", done: "Short break finished!", doneBreak: "Short break finished!" },
-    long:     { status: "Long break", done: "Long break finished!", doneBreak: "Long break finished!" },
-  };
-
-  // ── Audio ───────────────────────────────────────────────────────
-  // One AudioContext for the whole page: browsers cap the number of
-  // contexts and creating one per alert starts failing silently.
-  let audioCtx: AudioContext | null = null;
-  function getAudioCtx(): AudioContext | null {
-    try {
-      if (!audioCtx) {
-        const Ctor = window.AudioContext || (window as any).webkitAudioContext;
-        if (!Ctor) return null;
-        audioCtx = new Ctor();
-      }
-      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
-      return audioCtx;
-    } catch {
-      return null;
-    }
-  }
-
   function playAlertSound() {
     try {
-      const ctx = getAudioCtx();
-      if (!ctx) return;
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
       osc1.type = "sine";
-      osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime);
       osc2.type = "sine";
-      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-      osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
-      osc1.start(); osc2.start(ctx.currentTime + 0.15);
-      osc1.stop(ctx.currentTime + 1.2); osc2.stop(ctx.currentTime + 1.2);
+      osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+      osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+      osc1.start(); osc2.start(audioCtx.currentTime + 0.15);
+      osc1.stop(audioCtx.currentTime + 1.2); osc2.stop(audioCtx.currentTime + 1.2);
     } catch (e) { console.warn("AudioContext chime failed:", e); }
   }
 
-  // ── Session recording ───────────────────────────────────────────
-  function elapsedSeconds(): number {
-    const segment = sessionStart ? (Date.now() - sessionStart) / 1000 : 0;
-    return Math.max(0, Math.round(accumulated + segment));
-  }
-
-  function recordCompletedSession(duration: number) {
-    const endTime = new Date().toISOString();
-    const startedAt = new Date(Date.now() - duration * 1000).toISOString();
+  // ── Record session in UserStore & dispatch event ─────────────────
+  function recordCompletedSession() {
+    if (!sessionStartTime) return;
+    const endTime  = new Date().toISOString();
+    const duration = totalTime;
 
     try {
-      recordSession({
-        startTime: startedAt,
+      // UserStore session record
+      const sessions: any[] = JSON.parse(localStorage.getItem("sa_sessions_v1") || "[]");
+      sessions.push({
+        id:        `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        userId:    JSON.parse(localStorage.getItem("sa_user_profile_v1") || "{}").id || "anon",
+        startTime: new Date(sessionStartTime).toISOString(),
         endTime,
         duration,
-        mode: currentMode,
+        mode:      currentMode,
         completed: true,
       });
-    } catch (e) {
-      console.warn("Could not record session:", e);
-    }
+      localStorage.setItem("sa_sessions_v1", JSON.stringify(sessions.slice(-500)));
+
+      // Update activity
+      const today   = new Date().toISOString().split("T")[0];
+      const activity = JSON.parse(localStorage.getItem("sa_activity_v1") || "{}");
+      if (!activity[today]) {
+        activity[today] = { date: today, focusMinutes: 0, sessionsCompleted: 0, tasksCompleted: 0, backgroundsUsed: [], widgetsUsed: [] };
+      }
+      if (currentMode === "pomodoro") {
+        activity[today].focusMinutes     += Math.round(duration / 60);
+        activity[today].sessionsCompleted++;
+      }
+      localStorage.setItem("sa_activity_v1", JSON.stringify(activity));
+
+      // Recalculate stats (lightweight inline)
+      recalcStats(sessions, activity);
+    } catch {}
 
     // Dispatch event for StatsWidget to refresh
     document.dispatchEvent(new CustomEvent("study-session-complete", {
       detail: { duration, mode: currentMode, endTime }
     }));
+
+    sessionStartTime = null;
+  }
+
+  function recalcStats(sessions: any[], activity: Record<string, any>) {
+    const completed = sessions.filter(s => s.completed && s.mode === "pomodoro");
+    const total     = completed.reduce((acc: number, s: any) => acc + s.duration, 0);
+
+    const todayKey  = new Date().toISOString().split("T")[0];
+    const weekAgo   = Date.now() - 6 * 86400000;
+
+    const todaySecs = completed
+      .filter((s: any) => new Date(s.startTime).getTime() >= new Date(todayKey + "T00:00:00").getTime())
+      .reduce((a: number, s: any) => a + s.duration, 0);
+
+    const weekSecs  = completed
+      .filter((s: any) => new Date(s.startTime).getTime() >= weekAgo)
+      .reduce((a: number, s: any) => a + s.duration, 0);
+
+    const longest = completed.length ? Math.max(...completed.map((s: any) => s.duration)) : 0;
+    const avg     = completed.length ? Math.round(total / completed.length) : 0;
+
+    // Streak
+    const days      = Object.keys(activity).sort().reverse();
+    let streak      = 0;
+    const todayHas  = (activity[todayKey]?.sessionsCompleted ?? 0) > 0;
+    if (todayHas) {
+      streak = 1;
+      for (let i = 1; i < days.length; i++) {
+        const prev = new Date(days[i - 1]);
+        const curr = new Date(days[i]);
+        const diff = (prev.getTime() - curr.getTime()) / 86400000;
+        if (Math.abs(diff - 1) < 0.01 && activity[days[i]].sessionsCompleted > 0) streak++;
+        else break;
+      }
+    }
+
+    // Achievements
+    const ALL_ACH = [
+      { id: "first_session",  condition: () => completed.length >= 1    },
+      { id: "ten_sessions",   condition: () => completed.length >= 10   },
+      { id: "fifty_sessions", condition: () => completed.length >= 50   },
+      { id: "one_hour",       condition: () => total >= 3600             },
+      { id: "ten_hours",      condition: () => total >= 36000            },
+      { id: "hundred_hours",  condition: () => total >= 360000           },
+      { id: "streak_3",       condition: () => streak >= 3               },
+      { id: "streak_7",       condition: () => streak >= 7               },
+      { id: "streak_30",      condition: () => streak >= 30              },
+      { id: "long_session",   condition: () => longest >= 3600           },
+    ];
+    const achs = ALL_ACH.filter(a => a.condition()).map(a => a.id);
+
+    const stats = {
+      totalFocusSeconds:      total,
+      todayFocusSeconds:      todaySecs,
+      weekFocusSeconds:       weekSecs,
+      monthFocusSeconds:      weekSecs,
+      currentStreak:          streak,
+      longestStreak:          streak,
+      totalSessionsCompleted: completed.length,
+      avgSessionDuration:     avg,
+      longestSession:         longest,
+      totalTasksCompleted:    0,
+      achievements:           achs,
+      lastCalculated:         new Date().toISOString(),
+    };
+    try { localStorage.setItem("sa_stats_v1", JSON.stringify(stats)); } catch {}
   }
 
   function updateDisplay() {
@@ -191,79 +233,42 @@
     const s = timeLeft % 60;
     if (display) display.textContent = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     if (ring) {
-      const offset = ringCircumference - (totalTime > 0 ? (timeLeft / totalTime) * ringCircumference : 0);
+      const offset = ringCircumference - (timeLeft / totalTime) * ringCircumference;
       ring.style.strokeDashoffset = offset.toString();
     }
   }
 
-  function announcePhase(message: string) {
-    if (announcer) announcer.textContent = message;
-  }
-
   function startTimer() {
     if (isRunning) return;
-    isRunning   = true;
-    sessionStart = Date.now();
-    endAt       = Date.now() + timeLeft * 1000;
-
+    isRunning        = true;
+    sessionStartTime = Date.now();
     if (startText) startText.textContent = "Pause";
     if (startIcon) startIcon.innerHTML   = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
-    startBtn?.setAttribute("aria-label", "Pause timer");
-
-    if (timerId) clearInterval(timerId);
-    timerId = setInterval(tick, 250);
-    tick();
-  }
-
-  function tick() {
-    if (!isRunning) return;
-    const remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
-    timeLeft = remaining;
-    updateDisplay();
-    if (remaining <= 0) completeTimer();
-  }
-
-  function completeTimer() {
-    const duration = elapsedSeconds();
-    const wasFocus = currentMode === "pomodoro";
-
-    pauseTimer();
-    timeLeft = totalTime;
-    accumulated = 0;
-    updateDisplay();
-
-    playAlertSound();
-
-    if (wasFocus && duration > 0) {
-      recordCompletedSession(duration);
-    }
-
-    const label = wasFocus
-      ? MODE_LABELS[currentMode].done
-      : MODE_LABELS[currentMode].doneBreak;
-
-    showToast(label, { duration: 6000 });
-    announcePhase(label);
+    timerId = setInterval(() => {
+      timeLeft--;
+      updateDisplay();
+      if (timeLeft <= 0) {
+        pauseTimer();
+        playAlertSound();
+        if (currentMode === "pomodoro") recordCompletedSession();
+        resetTimer();
+        alert("Study session complete! Take a break.");
+      }
+    }, 1000);
   }
 
   function pauseTimer() {
     if (!isRunning) return;
     isRunning = false;
-    if (sessionStart) {
-      accumulated += (Date.now() - sessionStart) / 1000;
-      sessionStart = 0;
-    }
     if (startText) startText.textContent = "Start";
     if (startIcon) startIcon.innerHTML   = `<path d="M8 5v14l11-7z"/>`;
-    startBtn?.setAttribute("aria-label", "Start timer");
     if (timerId)   { clearInterval(timerId); timerId = null; }
   }
 
   function resetTimer() {
     pauseTimer();
-    timeLeft     = totalTime;
-    accumulated  = 0;
-    sessionStart = 0;
+    timeLeft         = totalTime;
+    sessionStartTime = null;
     updateDisplay();
   }
 
@@ -275,16 +280,14 @@
       modeButtons.forEach(b => {
         b.classList.remove("bg-primary", "text-white");
         b.classList.add("text-ink-subtle");
-        b.setAttribute("aria-pressed", "false");
       });
       btn.classList.add("bg-primary", "text-white");
       btn.classList.remove("text-ink-subtle");
-      btn.setAttribute("aria-pressed", "true");
-
       const timeValue = parseInt(btn.getAttribute("data-time") || "1500");
       totalTime    = timeValue;
+      timeLeft     = timeValue;
       currentMode  = (btn.id === "mode-pomodoro" ? "pomodoro" : btn.id === "mode-short" ? "short" : "long") as TimerMode;
-      if (statusDisplay) statusDisplay.textContent = MODE_LABELS[currentMode].status;
+      if (statusDisplay) statusDisplay.textContent = currentMode === "pomodoro" ? "Focusing" : "Relaxing";
       resetTimer();
     });
   });
@@ -294,9 +297,7 @@
   const minimizeBtn = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    const minimized = widget?.classList.toggle("is-minimized");
-    minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
-    minimizeBtn.setAttribute("aria-label", minimized ? "Expand timer widget" : "Minimize timer widget");
+    widget?.classList.toggle("is-minimized");
   });
 
   updateDisplay();

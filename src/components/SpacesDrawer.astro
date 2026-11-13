@@ -1,11 +1,35 @@
 ---
 // e:/ARUNAV WORKS/studyaesthetic.com/src/components/SpacesDrawer.astro
-import { getVideoSpaces, getStaticBackgrounds } from '../utils/VideoDatabase';
 
-// The catalogue lives in VideoDatabase so there is a single source of
-// truth — this file used to keep a second, already-drifted copy.
-const spaces = getVideoSpaces();
-const staticBgs = getStaticBackgrounds();
+const spaces = [
+  { id: "lofi-cafe",     title: "Lo-Fi Cafe Vibes",           category: "Cafes",          videoId: "hBGwt25cJRY", isTrending: true,  isNew: false, activeUsers: "4.8k", presetSounds: { lofi: 60, cafe: 40, rain: 20 } },
+  { id: "tokyo-rain",    title: "Cozy Tokyo Rain Cafe",        category: "City & Travel",  videoId: "5Wq1P1R7UaA", isTrending: true,  isNew: false, activeUsers: "3.2k", presetSounds: { rain: 70, keyboard: 30, lofi: 20 } },
+  { id: "cozy-library",  title: "Aesthetic Hogwarts Library",  category: "Cozy Rooms",     videoId: "4vIQON2fDWM", isTrending: true,  isNew: false, activeUsers: "2.1k", presetSounds: { keyboard: 40, lofi: 10 } },
+  { id: "rainy-window",  title: "Windowpane Autumn Rain",      category: "Nature & Rain",  videoId: "mPfS3Vf7Q2U", isTrending: false, isNew: true,  activeUsers: "1.5k", presetSounds: { rain: 80, lofi: 20 } },
+  { id: "anime-study",   title: "Anime Girl Bedroom Workspace",category: "Cozy Rooms",     videoId: "8qLh17e8N1E", isTrending: false, isNew: true,  activeUsers: "5.4k", presetSounds: { lofi: 80 } },
+  { id: "winter-train",  title: "Swiss Winter Express Train",  category: "City & Travel",  videoId: "2zVlh56lWsw", isTrending: false, isNew: true,  activeUsers: "920",  presetSounds: { lofi: 50, keyboard: 30 } },
+  { id: "forest-cabin",  title: "Rainy Cabin Fireplace",       category: "Nature & Rain",  videoId: "A2p5sP5t3Xw", isTrending: true,  isNew: false, activeUsers: "2.9k", presetSounds: { campfire: 70, rain: 40, birds: 20 } },
+  { id: "observatory",   title: "Night Sky Observatory",       category: "Nature & Rain",  videoId: "b83h2iW3Xf0", isTrending: false, isNew: false, activeUsers: "640",  presetSounds: { lofi: 40 } },
+  { id: "cyberpunk-apt", title: "Cyberpunk Rain Apartment",    category: "Cozy Rooms",     videoId: "S19024D9m0w", isTrending: true,  isNew: false, activeUsers: "3.7k", presetSounds: { lofi: 50, rain: 40 } },
+  { id: "zen-garden",    title: "Zen Rain Garden & Koi Pond",  category: "Nature & Rain",  videoId: "5m0L16Qd7zE", isTrending: false, isNew: false, activeUsers: "1.1k", presetSounds: { birds: 50, rain: 30 } },
+  { id: "starbucks-rain",title: "Rainy Coffee Shop Front",     category: "Cafes",          videoId: "uxR_A5z8J_A", isTrending: false, isNew: false, activeUsers: "2.5k", presetSounds: { cafe: 60, rain: 40 } },
+  { id: "aurora-camp",   title: "Aurora Camping Fire",         category: "Nature & Rain",  videoId: "s2e9Z5_K80Q", isTrending: false, isNew: true,  activeUsers: "880",  presetSounds: { campfire: 80, birds: 10 } },
+];
+
+const staticBgs = [
+  { id: "static-minimal-dark",    title: "Minimal Dark",       category: "Minimal",     url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&q=80" },
+  { id: "static-library-books",   title: "Warm Library",       category: "Aesthetic",   url: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&q=80" },
+  { id: "static-forest",          title: "Misty Forest",       category: "Nature",      url: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80" },
+  { id: "static-ocean",           title: "Ocean Sunset",       category: "Nature",      url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80" },
+  { id: "static-abstract-purple", title: "Purple Nebula",      category: "Abstract",    url: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&q=80" },
+  { id: "static-dark-desk",       title: "Dark Desk Setup",    category: "Dark Mode",   url: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80" },
+  { id: "static-mountains",       title: "Snowy Mountains",    category: "Nature",      url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80" },
+  { id: "static-neon-city",       title: "Neon City Night",    category: "Aesthetic",   url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80" },
+  { id: "static-sakura",          title: "Cherry Blossoms",    category: "Aesthetic",   url: "https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=400&q=80" },
+  { id: "static-space",           title: "Deep Space",         category: "Abstract",    url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80" },
+  { id: "static-coffee-table",    title: "Aesthetic Coffee",   category: "Minimal",     url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80" },
+  { id: "static-dark-gradient",   title: "Ink Dark Gradient",  category: "Dark Mode",   url: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&q=80" },
+];
 
 const spaceCategories = ["All Spaces", "Trending", "New Spaces", "Cozy Rooms", "Cafes", "Nature & Rain", "City & Travel"];
 const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "Abstract"];
@@ -15,23 +39,17 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
      SPACES & BACKGROUND LIBRARY DRAWER
      Three tabs: Video Spaces | Static Backgrounds | My Uploads
      ═══════════════════════════════════════════════════════════ -->
-<div
-  id="spaces-drawer"
-  class="fixed top-0 left-0 h-full w-full sm:w-[400px] max-w-full z-50 glass -translate-x-full transition-transform duration-300 ease-out flex flex-col edge-highlight"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="spaces-drawer-title"
-  aria-hidden="true"
->
+<div id="spaces-drawer" class="fixed top-0 left-0 h-full w-[400px] z-50 glass -translate-x-full transition-transform duration-300 ease-out flex flex-col edge-highlight">
+
   <!-- ── Header ─────────────────────────────────────── -->
   <div class="flex items-center justify-between p-5 border-b border-hairline shrink-0">
     <div class="flex items-center gap-2">
       <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
       </svg>
-      <span id="spaces-drawer-title" class="font-sans font-semibold text-lg tracking-tight">Background Library</span>
+      <span class="font-sans font-semibold text-lg tracking-tight">Background Library</span>
     </div>
-    <button id="close-drawer" type="button" class="text-ink-subtle hover:text-ink hover:bg-surface-2 p-1.5 rounded-md transition cursor-pointer" aria-label="Close background library">
+    <button id="close-drawer" class="text-ink-subtle hover:text-ink hover:bg-surface-2 p-1.5 rounded-md transition cursor-pointer" aria-label="Close background library">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
       </svg>
@@ -39,14 +57,14 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   </div>
 
   <!-- ── Main Tabs ───────────────────────────────────── -->
-  <div class="flex gap-0 px-4 pt-3 border-b border-hairline shrink-0" role="tablist" aria-label="Background library sections">
-    <button id="drawer-tab-spaces" type="button" role="tab" aria-selected="true" aria-controls="drawer-panel-spaces" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-primary text-ink cursor-pointer transition">
+  <div class="flex gap-0 px-4 pt-3 border-b border-hairline shrink-0">
+    <button id="drawer-tab-spaces" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-primary text-ink cursor-pointer transition" aria-selected="true">
       🎬 Video Spaces
     </button>
-    <button id="drawer-tab-backgrounds" type="button" role="tab" aria-selected="false" aria-controls="drawer-panel-backgrounds" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition">
+    <button id="drawer-tab-backgrounds" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition" aria-selected="false">
       🖼️ Static Backgrounds
     </button>
-    <button id="drawer-tab-uploads" type="button" role="tab" aria-selected="false" aria-controls="drawer-panel-uploads" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition">
+    <button id="drawer-tab-uploads" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition" aria-selected="false">
       ⬆️ My Uploads
     </button>
   </div>
@@ -54,7 +72,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   <!-- ════════════════════════════════════════
        TAB 1: VIDEO SPACES
        ════════════════════════════════════════ -->
-  <div id="drawer-panel-spaces" class="drawer-panel flex flex-col flex-1 min-h-0" role="tabpanel" aria-labelledby="drawer-tab-spaces">
+  <div id="drawer-panel-spaces" class="drawer-panel flex flex-col flex-1 min-h-0" style="">
 
     <!-- Search -->
     <div class="p-4 border-b border-hairline/60 shrink-0">
@@ -64,7 +82,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
         </span>
-        <input type="text" id="space-search" placeholder="Search video spaces…" autocomplete="off" aria-label="Search video spaces"
+        <input type="text" id="space-search" placeholder="Search video spaces…" autocomplete="off"
           class="w-full bg-surface-2/70 border border-hairline focus:border-primary-focus focus:outline-none rounded-md py-2 pl-9 pr-4 text-sm text-ink placeholder-ink-subtle transition font-sans"/>
       </div>
     </div>
@@ -72,7 +90,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     <!-- Category pills -->
     <div class="flex gap-1.5 px-3 py-2.5 overflow-x-auto border-b border-hairline/60 whitespace-nowrap shrink-0" style="scrollbar-width:none;">
       {spaceCategories.map((cat, idx) => (
-        <button type="button" class={`category-tab space-cat px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition shrink-0 ${idx === 0 ? "bg-primary text-white" : "bg-surface-2 text-ink-subtle hover:text-ink"}`} data-category={cat} aria-pressed={idx === 0 ? "true" : "false"}>
+        <button class={`category-tab space-cat px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition shrink-0 ${idx === 0 ? "bg-primary text-white" : "bg-surface-2 text-ink-subtle hover:text-ink"}`} data-category={cat}>
           {cat}
         </button>
       ))}
@@ -84,20 +102,16 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         <div
           class="space-card bg-surface-1/90 border border-hairline hover:border-hairline-strong hover:bg-surface-2/90 transition duration-200 rounded-lg overflow-hidden cursor-pointer flex flex-col relative group"
           data-id={space.id}
-          data-video-id={space.contentUrl}
+          data-video-id={space.videoId}
           data-title={space.title}
-          data-presets={JSON.stringify(space.presetSounds ?? {})}
+          data-presets={JSON.stringify(space.presetSounds)}
           data-category={space.category}
           data-trending={space.isTrending ? "true" : "false"}
           data-new={space.isNew ? "true" : "false"}
-          role="button"
-          tabindex="0"
-          aria-label={`Use space: ${space.title}`}
         >
           <!-- Thumbnail -->
           <div class="relative h-[108px] w-full bg-canvas/80 overflow-hidden">
-            <img src={`https://img.youtube.com/vi/${space.contentUrl}/mqdefault.jpg`} alt={space.title}
-              width="320" height="180"
+            <img src={`https://img.youtube.com/vi/${space.videoId}/mqdefault.jpg`} alt={space.title}
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"/>
             <!-- Badges -->
             <div class="absolute top-2 left-2 flex gap-1">
@@ -110,7 +124,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
               <span class="text-[10px] text-ink font-mono">{space.activeUsers} here</span>
             </div>
             <!-- Favorite star -->
-            <button type="button" class="fav-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[11px] hover:bg-black/80 transition cursor-pointer" data-id={space.id} aria-label={`Favorite ${space.title}`} aria-pressed="false">☆</button>
+            <button class="fav-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[11px] hover:bg-black/80 transition cursor-pointer" data-id={space.id} aria-label="Toggle favorite">⭐</button>
           </div>
           <!-- Info -->
           <div class="p-3">
@@ -119,22 +133,18 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
           </div>
         </div>
       ))}
-      <!-- Empty state for search / filter combinations -->
-      <p id="spaces-empty" class="hidden text-xs text-ink-subtle text-center py-8">
-        No spaces match that search. Try another category or keyword.
-      </p>
     </div>
   </div>
 
   <!-- ════════════════════════════════════════
        TAB 2: STATIC BACKGROUNDS
        ════════════════════════════════════════ -->
-  <div id="drawer-panel-backgrounds" class="drawer-panel flex flex-col flex-1 min-h-0" style="display:none" role="tabpanel" aria-labelledby="drawer-tab-backgrounds">
+  <div id="drawer-panel-backgrounds" class="drawer-panel flex flex-col flex-1 min-h-0" style="display:none">
 
     <!-- Category pills -->
     <div class="flex gap-1.5 px-3 py-3 overflow-x-auto border-b border-hairline/60 whitespace-nowrap shrink-0" style="scrollbar-width:none;">
       {bgCategories.map((cat, idx) => (
-        <button type="button" class={`bg-cat-tab px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition shrink-0 ${idx === 0 ? "bg-primary text-white" : "bg-surface-2 text-ink-subtle hover:text-ink"}`} data-category={cat} aria-pressed={idx === 0 ? "true" : "false"}>
+        <button class={`bg-cat-tab px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition shrink-0 ${idx === 0 ? "bg-primary text-white" : "bg-surface-2 text-ink-subtle hover:text-ink"}`} data-category={cat}>
           {cat}
         </button>
       ))}
@@ -146,17 +156,13 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         <div
           class="bg-library-card border border-hairline rounded-lg overflow-hidden cursor-pointer relative group"
           data-bg-id={bg.id}
-          data-bg-url={bg.contentUrl}
+          data-bg-url={bg.url}
           data-bg-title={bg.title}
           data-bg-category={bg.category}
           data-bg-type="image"
-          role="button"
-          tabindex="0"
-          aria-label={`Use background: ${bg.title}`}
         >
           <div class="relative h-24 overflow-hidden">
-            <img src={bg.thumbnailUrl} alt={bg.title}
-              width="400" height="225"
+            <img src={bg.thumb} alt={bg.title}
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"/>
             <!-- Overlay on hover -->
             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
@@ -175,7 +181,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   <!-- ════════════════════════════════════════
        TAB 3: MY UPLOADS
        ════════════════════════════════════════ -->
-  <div id="drawer-panel-uploads" class="drawer-panel flex flex-col flex-1 min-h-0" style="display:none" role="tabpanel" aria-labelledby="drawer-tab-uploads">
+  <div id="drawer-panel-uploads" class="drawer-panel flex flex-col flex-1 min-h-0" style="display:none">
 
     <!-- Upload area -->
     <div class="p-4 border-b border-hairline/60 shrink-0">
@@ -188,7 +194,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         <div class="text-center">
           <p class="text-sm font-semibold text-ink group-hover:text-primary-hover transition">Upload Background</p>
           <p class="text-xs text-ink-subtle mt-0.5">Images (JPG, PNG, WebP) or Videos (MP4, WebM)</p>
-          <p class="text-[10px] text-ink-subtle/60 mt-1">Images up to 3 MB · Videos up to 50 MB (session only)</p>
+          <p class="text-[10px] text-ink-subtle/60 mt-1">Max 50MB recommended</p>
         </div>
       </label>
       <input type="file" id="bg-upload-input" accept="image/*,video/mp4,video/webm" class="hidden" aria-label="Upload custom background"/>
@@ -209,76 +215,28 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 </style>
 
 <script>
-  import { getCustomUploads, addCustomUpload, removeCustomUpload, resolveContentUrl, MAX_IMAGE_UPLOAD_BYTES, MAX_VIDEO_UPLOAD_BYTES } from '../utils/VideoDatabase';
-  import { toggleFavorite, isFavorite } from '../utils/UserStore';
-  import { showToast } from '../utils/toast';
-
   // ── Drawer open/close ────────────────────────────────────────────
   const drawer    = document.getElementById("spaces-drawer");
   const closeBtn  = document.getElementById("close-drawer");
-
-  function requestClose() {
-    document.dispatchEvent(new CustomEvent("close-drawer"));
-  }
-  closeBtn?.addEventListener("click", requestClose);
-
-  // Keep the keyboard focus inside the drawer while it is open
-  const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-  document.addEventListener("drawer-state", (e: any) => {
-    if (!e.detail?.open) return;
-    // Move focus into the drawer
-    const first = drawer?.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
-  });
-
-  drawer?.addEventListener("keydown", (e) => {
-    if (e.key !== "Tab") return;
-    const items = Array.from(drawer.querySelectorAll<HTMLElement>(FOCUSABLE))
-      .filter(el => el.offsetParent !== null);
-    if (items.length === 0) return;
-    const first = items[0];
-    const last  = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  });
+  closeBtn?.addEventListener("click", () => drawer?.classList.add("-translate-x-full"));
 
   // ── Main tab system ──────────────────────────────────────────────
   const mainTabs   = ["spaces", "backgrounds", "uploads"].map(id => document.getElementById(`drawer-tab-${id}`));
   const mainPanels = ["spaces", "backgrounds", "uploads"].map(id => document.getElementById(`drawer-panel-${id}`));
 
-  function activateMainTab(idx: number) {
-    mainTabs.forEach((t, i) => {
-      const isActive = i === idx;
-      t?.classList.toggle("border-primary", isActive);
-      t?.classList.toggle("text-ink", isActive);
-      t?.classList.toggle("border-transparent", !isActive);
-      t?.classList.toggle("text-ink-subtle", !isActive);
-      t?.setAttribute("aria-selected", isActive ? "true" : "false");
-    });
-    mainPanels.forEach((p, i) => {
-      if (!p) return;
-      (p as HTMLElement).style.display = (i === idx) ? "flex" : "none";
-    });
-  }
-
   mainTabs.forEach((tab, idx) => {
-    tab?.addEventListener("click", () => activateMainTab(idx));
-    tab?.addEventListener("keydown", (e) => {
-      const i = mainTabs.indexOf(tab as HTMLElement);
-      let next = -1;
-      if (e.key === "ArrowRight") next = (i + 1) % mainTabs.length;
-      if (e.key === "ArrowLeft")  next = (i - 1 + mainTabs.length) % mainTabs.length;
-      if (next >= 0) {
-        e.preventDefault();
-        (mainTabs[next] as HTMLElement).focus();
-        activateMainTab(next);
-      }
+    tab?.addEventListener("click", () => {
+      mainTabs.forEach((t, i) => {
+        t?.classList.toggle("border-primary", i === idx);
+        t?.classList.toggle("text-ink",       i === idx);
+        t?.classList.toggle("border-transparent", i !== idx);
+        t?.classList.toggle("text-ink-subtle", i !== idx);
+        t?.setAttribute("aria-selected", (i === idx).toString());
+      });
+      mainPanels.forEach((p, i) => {
+        if (!p) return;
+        (p as HTMLElement).style.display = (i === idx) ? "flex" : "none";
+      });
     });
   });
 
@@ -286,13 +244,11 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   const searchInput  = document.getElementById("space-search") as HTMLInputElement;
   const spaceCatTabs = document.querySelectorAll<HTMLButtonElement>(".space-cat");
   const spaceCards   = document.querySelectorAll<HTMLElement>(".space-card");
-  const spacesEmpty  = document.getElementById("spaces-empty");
 
   let activeSpaceCat = "All Spaces";
   let searchQuery    = "";
 
   function filterSpaces() {
-    let visible = 0;
     spaceCards.forEach(card => {
       const title      = card.getAttribute("data-title")?.toLowerCase() || "";
       const category   = card.getAttribute("data-category") || "";
@@ -303,11 +259,8 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         : activeSpaceCat === "Trending"    ? isTrending
         : activeSpaceCat === "New Spaces"  ? isNew
         : category === activeSpaceCat;
-      const visibleCard = matchSearch && matchCat;
-      card.classList.toggle("hidden", !visibleCard);
-      if (visibleCard) visible++;
+      card.classList.toggle("hidden", !(matchSearch && matchCat));
     });
-    spacesEmpty?.classList.toggle("hidden", visible > 0);
   }
 
   searchInput?.addEventListener("input", (e) => {
@@ -319,63 +272,53 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       spaceCatTabs.forEach(t => {
         t.classList.remove("bg-primary", "text-white");
         t.classList.add("bg-surface-2", "text-ink-subtle");
-        t.setAttribute("aria-pressed", "false");
       });
       tab.classList.add("bg-primary", "text-white");
       tab.classList.remove("bg-surface-2", "text-ink-subtle");
-      tab.setAttribute("aria-pressed", "true");
       activeSpaceCat = tab.getAttribute("data-category") || "All Spaces";
       filterSpaces();
     });
   });
 
-  // ── Space card activation (click + keyboard) ─────────────────────
-  function activateSpace(card: HTMLElement) {
-    const videoId = card.getAttribute("data-video-id");
-    const title   = card.getAttribute("data-title");
-    let presets: Record<string, number> = {};
-    try {
-      presets = JSON.parse(card.getAttribute("data-presets") || "{}");
-    } catch {
-      presets = {};
-    }
-    document.dispatchEvent(new CustomEvent("change-space", {
-      detail: { id: card.getAttribute("data-id"), videoId, title, presets }
-    }));
-    requestClose();
-
-    // Mark active — a dedicated class, because two Tailwind border
-    // colour utilities on one element resolve by stylesheet order.
-    spaceCards.forEach(c => c.classList.remove("is-active"));
-    card.classList.add("is-active");
-  }
-
+  // ── Space card click — change background video ───────────────────
   spaceCards.forEach(card => {
     card.addEventListener("click", (e) => {
       if ((e.target as HTMLElement).closest(".fav-btn")) return;
-      activateSpace(card);
-    });
-    card.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      if ((e.target as HTMLElement).closest(".fav-btn")) return;
-      e.preventDefault();
-      activateSpace(card);
+      const videoId = card.getAttribute("data-video-id");
+      const title   = card.getAttribute("data-title");
+      const presets = JSON.parse(card.getAttribute("data-presets") || "{}");
+      document.dispatchEvent(new CustomEvent("change-space", { detail: { id: card.getAttribute("data-id"), videoId, title, presets } }));
+      drawer?.classList.add("-translate-x-full");
+
+      // Mark active
+      spaceCards.forEach(c => c.classList.remove("border-primary/50"));
+      card.classList.add("border-primary/50");
     });
   });
 
   // ── Favorites (spaces) ───────────────────────────────────────────
+  function getFavs(): string[] {
+    try { return JSON.parse(localStorage.getItem("sa_favorites_v1") || "[]").map((f: any) => f.itemId); }
+    catch { return []; }
+  }
+  function toggleFav(id: string) {
+    try {
+      const favs: any[] = JSON.parse(localStorage.getItem("sa_favorites_v1") || "[]");
+      const idx = favs.findIndex((f: any) => f.itemId === id);
+      if (idx >= 0) favs.splice(idx, 1);
+      else favs.push({ itemId: id, itemType: "space", addedAt: new Date().toISOString() });
+      localStorage.setItem("sa_favorites_v1", JSON.stringify(favs));
+    } catch {}
+  }
+
   document.querySelectorAll<HTMLButtonElement>(".fav-btn").forEach(btn => {
-    const id = btn.getAttribute("data-id") || "";
-    const syncFavState = () => {
-      const isFav = isFavorite(id);
-      btn.textContent = isFav ? "⭐" : "☆";
-      btn.setAttribute("aria-pressed", isFav ? "true" : "false");
-    };
-    syncFavState();
+    const id   = btn.getAttribute("data-id") || "";
+    const isFav = getFavs().includes(id);
+    btn.textContent = isFav ? "⭐" : "☆";
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      toggleFavorite(id, "space");
-      syncFavState();
+      toggleFav(id);
+      btn.textContent = getFavs().includes(id) ? "⭐" : "☆";
     });
   });
 
@@ -388,11 +331,9 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       bgCatTabs.forEach(t => {
         t.classList.remove("bg-primary", "text-white");
         t.classList.add("bg-surface-2", "text-ink-subtle");
-        t.setAttribute("aria-pressed", "false");
       });
       tab.classList.add("bg-primary", "text-white");
       tab.classList.remove("bg-surface-2", "text-ink-subtle");
-      tab.setAttribute("aria-pressed", "true");
       const cat = tab.getAttribute("data-category") || "All";
       bgCards.forEach(card => {
         const cardCat = card.getAttribute("data-bg-category") || "";
@@ -401,29 +342,22 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     });
   });
 
-  // ── Static background card activation ───────────────────────────
-  function activateBackground(card: HTMLElement) {
-    const url   = card.getAttribute("data-bg-url")   || "";
-    const title = card.getAttribute("data-bg-title")  || "";
-    const id    = card.getAttribute("data-bg-id")     || "";
-
-    document.dispatchEvent(new CustomEvent("change-background", {
-      detail: { type: "image", url, title, id }
-    }));
-
-    // Visual active state
-    bgCards.forEach(c => c.classList.remove("is-active"));
-    card.classList.add("is-active");
-
-    requestClose();
-  }
-
+  // ── Static background card click — apply as background image ────
   bgCards.forEach(card => {
-    card.addEventListener("click", () => activateBackground(card));
-    card.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      e.preventDefault();
-      activateBackground(card);
+    card.addEventListener("click", () => {
+      const url   = card.getAttribute("data-bg-url")   || "";
+      const title = card.getAttribute("data-bg-title")  || "";
+      const id    = card.getAttribute("data-bg-id")     || "";
+
+      document.dispatchEvent(new CustomEvent("change-background", {
+        detail: { type: "image", url, title, id }
+      }));
+
+      // Visual active state
+      bgCards.forEach(c => c.classList.remove("is-active"));
+      card.classList.add("is-active");
+
+      drawer?.classList.add("-translate-x-full");
     });
   });
 
@@ -433,7 +367,10 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   const noUploadsMsg   = document.getElementById("no-uploads-msg");
 
   function renderCustomUploads() {
-    const customs = getCustomUploads();
+    const customs: any[] = (() => {
+      try { return JSON.parse(localStorage.getItem("sa_custom_backgrounds_v1") || "[]"); }
+      catch { return []; }
+    })();
 
     if (!uploadsList) return;
     uploadsList.querySelectorAll(".custom-upload-item").forEach(el => el.remove());
@@ -445,168 +382,97 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     noUploadsMsg?.classList.add("hidden");
 
     customs.forEach((item: any) => {
-      const liveUrl = resolveContentUrl(item);
-
       const div = document.createElement("div");
-      div.className = "custom-upload-item flex items-center gap-3 p-2.5 bg-surface-2/50 border border-hairline rounded-lg hover:border-hairline-strong transition group";
-      div.tabIndex = 0;
-      div.setAttribute("role", "button");
-      div.setAttribute("aria-label", `Use background: ${item.title}`);
+      div.className = "custom-upload-item flex items-center gap-3 p-2.5 bg-surface-2/50 border border-hairline rounded-lg cursor-pointer hover:border-hairline-strong transition group";
 
       const preview = document.createElement("div");
       preview.className = "w-16 h-10 rounded overflow-hidden shrink-0 bg-surface-3";
-      if (item.contentType === "image" && liveUrl) {
+      if (item.contentType === "image") {
         const img = document.createElement("img");
-        img.src = liveUrl;
-        img.alt = "";
+        img.src = item.contentUrl;
         img.className = "w-full h-full object-cover";
         preview.appendChild(img);
       } else {
-        const icon = document.createElement("div");
-        icon.className = "w-full h-full flex items-center justify-center text-lg";
-        icon.setAttribute("aria-hidden", "true");
-        icon.textContent = "🎬";
-        preview.appendChild(icon);
+        preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-lg">🎬</div>`;
       }
 
       const info = document.createElement("div");
       info.className = "flex-1 min-w-0";
-
-      // Use textContent — the file name is user supplied and was
-      // previously injected as HTML.
-      const title = document.createElement("p");
-      title.className = "text-xs font-semibold text-ink truncate";
-      title.textContent = item.title;
-
-      const meta = document.createElement("p");
-      meta.className = "text-[10px] text-ink-subtle";
-      meta.textContent = item.contentType === "image"
-        ? "Image"
-        : (liveUrl ? "Video (this session)" : "Video — re-upload to use again");
-
-      info.appendChild(title);
-      info.appendChild(meta);
+      info.innerHTML = `
+        <p class="text-xs font-semibold text-ink truncate">${item.title}</p>
+        <p class="text-[10px] text-ink-subtle">${item.contentType === "image" ? "Image" : "Video"}</p>
+      `;
 
       const del = document.createElement("button");
-      del.type = "button";
       del.className = "text-ink-subtle hover:text-red-400 p-1 rounded transition shrink-0 cursor-pointer";
-      del.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
-      del.setAttribute("aria-label", `Delete upload: ${item.title}`);
+      del.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+      del.setAttribute("aria-label", "Delete upload");
       del.addEventListener("click", (e) => {
         e.stopPropagation();
-        removeCustomUpload(item.id);
+        try {
+          const list: any[] = JSON.parse(localStorage.getItem("sa_custom_backgrounds_v1") || "[]");
+          localStorage.setItem("sa_custom_backgrounds_v1", JSON.stringify(list.filter((c: any) => c.id !== item.id)));
+        } catch {}
         renderCustomUploads();
-        showToast("Upload deleted");
       });
 
       div.appendChild(preview);
       div.appendChild(info);
       div.appendChild(del);
 
-      const apply = () => {
-        if (!liveUrl) {
-          showToast("This video is no longer available. Please upload it again.");
-          return;
-        }
-        document.dispatchEvent(new CustomEvent("change-background", {
-          detail: { type: item.contentType === "image" ? "image" : "direct_video", url: liveUrl, title: item.title, id: item.id }
-        }));
-        requestClose();
-      };
-
       div.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest("button")) return;
-        apply();
-      });
-      div.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        apply();
+        document.dispatchEvent(new CustomEvent("change-background", {
+          detail: { type: item.contentType, url: item.contentUrl, title: item.title, id: item.id }
+        }));
+        drawer?.classList.add("-translate-x-full");
       });
 
       uploadsList.appendChild(div);
     });
   }
 
-  function readFileAsDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error("Could not read the file."));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  uploadInput?.addEventListener("change", async (e) => {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
+  uploadInput?.addEventListener("change", (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
     const isVideo = file.type.startsWith("video/");
     const isImage = file.type.startsWith("image/");
-    if (!isVideo && !isImage) {
-      showToast("Unsupported file type. Choose an image or a video.");
-      input.value = "";
-      return;
-    }
+    if (!isVideo && !isImage) return;
 
-    const title = file.name.replace(/\.[^.]+$/, "") || "Custom background";
+    const url = URL.createObjectURL(file);
+    const type = isVideo ? "video" : "image";
+
+    const newUpload = {
+      id:          `upload-${Date.now()}`,
+      title:       file.name.replace(/\.[^.]+$/, ""),
+      contentUrl:  url,
+      contentType: type,
+      uploadDate:  new Date().toISOString(),
+    };
 
     try {
-      if (isImage) {
-        if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
-          showToast("Image is too large. The maximum is 3 MB.");
-          input.value = "";
-          return;
-        }
-        // Images are stored as data URLs so they survive a reload.
-        const dataUrl = await readFileAsDataUrl(file);
-        addCustomUpload(title, dataUrl, "image");
-      } else {
-        if (file.size > MAX_VIDEO_UPLOAD_BYTES) {
-          showToast("Video is too large. The maximum is 50 MB.");
-          input.value = "";
-          return;
-        }
-        // Videos use an object URL, which only lives for this session.
-        const blobUrl = URL.createObjectURL(file);
-        addCustomUpload(title, blobUrl, "direct_video");
-      }
-    } catch (err) {
-      showToast("Could not save that upload. It may be too large for browser storage.");
-      input.value = "";
-      return;
-    }
+      const list: any[] = JSON.parse(localStorage.getItem("sa_custom_backgrounds_v1") || "[]");
+      list.unshift(newUpload);
+      localStorage.setItem("sa_custom_backgrounds_v1", JSON.stringify(list.slice(0, 50)));
+    } catch {}
 
     renderCustomUploads();
 
     // Auto-apply the uploaded background
-    const latest = getCustomUploads()[0];
-    if (latest) {
-      const liveUrl = resolveContentUrl(latest);
-      if (liveUrl) {
-        document.dispatchEvent(new CustomEvent("change-background", {
-          detail: {
-            type: latest.contentType === "image" ? "image" : "direct_video",
-            url: liveUrl,
-            title: latest.title,
-            id: latest.id,
-          }
-        }));
-        requestClose();
-      }
-    }
+    document.dispatchEvent(new CustomEvent("change-background", {
+      detail: { type, url, title: newUpload.title, id: newUpload.id }
+    }));
 
-    input.value = "";
+    uploadInput.value = "";
   });
 
   // ── Keyboard: Escape closes drawer ─────────────────────────────
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && drawer && !drawer.classList.contains("-translate-x-full")) {
-      requestClose();
+    if (e.key === "Escape" && !drawer?.classList.contains("-translate-x-full")) {
+      drawer?.classList.add("-translate-x-full");
     }
   });
 
   renderCustomUploads();
-  filterSpaces();
 </script>

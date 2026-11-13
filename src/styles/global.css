@@ -72,65 +72,10 @@
 }
 
 /* ─── Base body ─────────────────────────────────────────────── */
-html {
-  /* Tell the browser to render native controls (scrollbars, inputs,
-     date pickers) in dark mode instead of the light default. */
-  color-scheme: dark;
-}
-
 body {
   background-color: var(--color-canvas);
   color: var(--color-ink);
   overflow: hidden;
-  /* Prevent rubber-band scrolling of the page shell on desktop */
-  overscroll-behavior: none;
-}
-
-/* ─── Focus visibility ───────────────────────────────────────────
-   Every interactive element gets a visible focus ring. Previously
-   several components used `focus:outline-none` with nothing to
-   replace it, leaving keyboard users with no focus indicator.     */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-primary-hover);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* Number columns / timers should not jitter while counting */
-.font-mono {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Kill the 300ms tap delay on touch devices */
-button,
-a,
-label,
-summary {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(94, 106, 210, 0.25);
-}
-
-/* ─── Reduced motion ────────────────────────────────────────────
-   Honour the OS "reduce motion" setting: stop the ambient gradient,
-   the breathing pulse, the spinner and every non-essential
-   transition/ animation.                                          */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-
-  .animated-bg-fallback {
-    animation: none !important;
-  }
-
-  .video-spinner {
-    animation: none !important;
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -373,8 +318,7 @@ body.is-dragging #bg-player {
 #video-loading-overlay {
   position: absolute;
   inset: 0;
-  /* Above the foreground UI layer (z-20), below the dock (z-100) */
-  z-index: 29;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -382,17 +326,12 @@ body.is-dragging #bg-player {
     rgba(30, 32, 48, 0.8) 0%,
     rgba(1, 1, 2, 0.95) 70%
   );
-  transition: opacity 0.6s ease, visibility 0.6s ease;
-  /* The wrapper is `pointer-events-none` so the YouTube iframe never
-     steals clicks — the overlays inside it must opt back in or they
-     become unclickable. */
-  pointer-events: auto;
+  transition: opacity 0.6s ease;
 }
 
 #video-loading-overlay.hidden {
   opacity: 0;
   pointer-events: none;
-  visibility: hidden;
 }
 
 @keyframes video-spinner {
@@ -410,9 +349,7 @@ body.is-dragging #bg-player {
 #video-start-overlay {
   position: absolute;
   inset: 0;
-  /* Above the foreground UI layer (z-20) so the prompt can actually
-     be clicked, below the dock (z-100). */
-  z-index: 30;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -420,43 +357,13 @@ body.is-dragging #bg-player {
   gap: 16px;
   background: rgba(1, 1, 2, 0.72);
   backdrop-filter: blur(12px);
-  transition: opacity 0.5s ease, visibility 0.5s ease;
+  transition: opacity 0.5s ease;
   cursor: pointer;
-  /* Required: the parent wrapper is pointer-events-none, and
-     `pointer-events` is an inherited property. Without this the
-     "click to start" prompt could never be clicked. */
-  pointer-events: auto;
 }
 
 #video-start-overlay.hidden {
   opacity: 0;
   pointer-events: none;
-  visibility: hidden;
-}
-
-/* ─── Drawer / modal surfaces ───────────────────────────────────
-   Both are scrollable panels: contain the overscroll so scrolling
-   to the end does not rubber-band the page behind them.          */
-#spaces-drawer,
-#auth-modal {
-  overscroll-behavior: contain;
-}
-
-/* Backdrop behind the background-library drawer */
-#drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: rgba(1, 1, 2, 0.55);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-#drawer-backdrop.is-open {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 /* Animated gradient background fallback */
@@ -534,84 +441,6 @@ body.is-dragging #bg-player {
 .drawer-tab {
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
-}
-
-/* ─── Active video space card ──────────────────────────────────
-   Uses a dedicated class instead of toggling `border-primary/50`
-   alongside `border-hairline`: two Tailwind border-colour
-   utilities on one element resolve by stylesheet order, not class
-   order, so the highlight was unreliable.                       */
-.space-card.is-active {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary);
-}
-
-/* ─── Toast notifications ───────────────────────────────────── */
-#sa-toast-region {
-  position: fixed;
-  z-index: 200;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.sa-toast {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: rgba(20, 21, 22, 0.95);
-  border: 1px solid var(--color-hairline-strong);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  max-width: min(420px, calc(100vw - 32px));
-  animation: toast-in 0.25s var(--ease-out-quart);
-}
-
-.sa-toast.is-leaving {
-  animation: toast-out 0.2s var(--ease-in-quart) forwards;
-}
-
-.sa-toast-action {
-  flex-shrink: 0;
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--color-primary-hover);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-hairline-strong);
-  cursor: pointer;
-  background: transparent;
-}
-
-.sa-toast-action:hover {
-  background: rgba(94, 106, 210, 0.15);
-}
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes toast-out {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(6px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sa-toast,
-  .sa-toast.is-leaving {
-    animation: none !important;
-  }
 }
 
 /* ─── Stats number counter animation ───────────────────────── */
