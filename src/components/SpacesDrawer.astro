@@ -7,7 +7,7 @@ import {
 const spaces = await getSpaceVideosFromDb();
 const staticBgs = await getStaticBackgroundsFromDb();
 
-const spaceCategories = ["All Spaces", "Trending", "New Spaces", "Cozy Rooms", "Cafes", "Nature & Rain", "City & Travel"];
+const spaceCategories = ["All Spaces", "YouTube Live", "Instant MP4", "Trending", "New Spaces", "Cozy Rooms", "Cafes", "Nature & Rain", "City & Travel"];
 const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "Abstract"];
 ---
 
@@ -96,10 +96,17 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
               <img src={space.thumbnailUrl} alt={space.title} referrerpolicy="no-referrer"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"/>
               <!-- Badges -->
-              <div class="absolute top-2 left-2 flex gap-1">
+              <div class="absolute top-2 left-2 flex gap-1 items-center">
                 {space.isTrending && <span class="bg-primary/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">Trending</span>}
                 {space.isNew      && <span class="bg-semantic-success/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">New</span>}
-                <span class="bg-black/75 text-ink-muted text-[10px] font-mono px-2 py-0.5 rounded-sm">Instant</span>
+                {space.contentType === 'youtube' ? (
+                  <span class="bg-red-600/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white" aria-hidden="true"></span>
+                    YT Stream
+                  </span>
+                ) : (
+                  <span class="bg-black/75 text-ink-muted text-[10px] font-mono px-2 py-0.5 rounded-sm">Instant</span>
+                )}
               </div>
               <!-- Active users -->
               {space.activeUsers && (
@@ -111,7 +118,12 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
             </div>
             <!-- Info -->
             <div class="p-3">
-              <span class="text-[11px] text-primary font-medium uppercase tracking-wider">{space.category}</span>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[11px] text-primary font-medium uppercase tracking-wider">{space.category}</span>
+                {space.contentType === 'youtube' && space.creatorInfo && (
+                  <span class="text-[10px] text-ink-subtle font-mono truncate">{space.creatorInfo}</span>
+                )}
+              </div>
               <h3 class="font-sans font-semibold text-sm text-ink mt-0.5 group-hover:text-primary-hover transition-colors leading-snug">{space.title}</h3>
             </div>
           </button>
@@ -185,12 +197,12 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       </label>
       <input type="file" id="bg-upload-input" accept="image/*,video/mp4,video/webm" class="hidden" aria-label="Upload custom background"/>
 
-      <!-- Save external MP4 or image URL directly to server DB -->
+      <!-- Save external YouTube, MP4, or image URL directly to server DB -->
       <form id="custom-url-form" class="flex gap-1.5">
         <input
           type="url"
           id="custom-url-input"
-          placeholder="Or paste MP4 / image URL to save…"
+          placeholder="Or paste YouTube, MP4, or image URL…"
           class="flex-1 bg-surface-2/70 border border-hairline focus:border-primary-focus focus:outline-none rounded-md px-2.5 py-1.5 text-xs text-ink placeholder-ink-subtle font-sans"
         />
         <button type="submit" class="px-3 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition cursor-pointer shrink-0">
@@ -215,6 +227,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
 <script>
   import { recordVideoView, syncVideosFromServer } from '../utils/VideoDatabase';
+  import { extractYouTubeId } from '../utils/mediaCatalog';
 
   const drawer   = document.getElementById("spaces-drawer");
   const closeBtn = document.getElementById("close-drawer");
@@ -253,14 +266,17 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
   function filterSpaces() {
     spaceCards.forEach(card => {
-      const title      = card.getAttribute("data-title")?.toLowerCase() || "";
-      const category   = card.getAttribute("data-category") || "";
-      const isTrending = card.getAttribute("data-trending") === "true";
-      const isNew      = card.getAttribute("data-new")      === "true";
-      const matchSearch = title.includes(searchQuery);
-      const matchCat    = activeSpaceCat === "All Spaces" ? true
-        : activeSpaceCat === "Trending"    ? isTrending
-        : activeSpaceCat === "New Spaces"  ? isNew
+      const title       = card.getAttribute("data-title")?.toLowerCase() || "";
+      const category    = card.getAttribute("data-category") || "";
+      const contentType = card.getAttribute("data-content-type") || "direct_video";
+      const isTrending  = card.getAttribute("data-trending") === "true";
+      const isNew       = card.getAttribute("data-new")      === "true";
+      const matchSearch = title.includes(searchQuery) || category.toLowerCase().includes(searchQuery);
+      const matchCat    = activeSpaceCat === "All Spaces"   ? true
+        : activeSpaceCat === "YouTube Live" ? contentType === "youtube"
+        : activeSpaceCat === "Instant MP4"  ? contentType === "direct_video"
+        : activeSpaceCat === "Trending"     ? isTrending
+        : activeSpaceCat === "New Spaces"   ? isNew
         : category === activeSpaceCat;
       card.classList.toggle("hidden", !(matchSearch && matchCat));
     });
@@ -406,6 +422,13 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         img.referrerPolicy = "no-referrer";
         img.className = "w-full h-full object-cover";
         preview.appendChild(img);
+      } else if (item.contentType === "youtube") {
+        const ytId = extractYouTubeId(item.contentUrl) || item.contentUrl;
+        const img = document.createElement("img");
+        img.src = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+        img.referrerPolicy = "no-referrer";
+        img.className = "w-full h-full object-cover";
+        preview.appendChild(img);
       } else {
         preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-sm text-ink-subtle font-mono">MP4</div>`;
       }
@@ -417,7 +440,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       titleP.textContent = item.title;
       const typeP = document.createElement("p");
       typeP.className = "text-[10px] text-ink-subtle";
-      typeP.textContent = item.contentType === "image" ? "Image" : "Video";
+      typeP.textContent = item.contentType === "image" ? "Image" : item.contentType === "youtube" ? "YouTube Stream" : "Video";
       info.appendChild(titleP);
       info.appendChild(typeP);
 
@@ -444,8 +467,9 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
       div.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest("button")) return;
+        const dispatchType = item.contentType === "image" ? "image" : item.contentType === "youtube" ? "youtube" : "video";
         document.dispatchEvent(new CustomEvent("change-background", {
-          detail: { type: item.contentType === "image" ? "image" : "video", url: item.contentUrl, title: item.title, id: item.id }
+          detail: { type: dispatchType, url: item.contentUrl, title: item.title, id: item.id }
         }));
         drawer?.classList.add("-translate-x-full");
       });
@@ -502,21 +526,25 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     e.preventDefault();
     const rawUrl = customUrlInput?.value.trim() || "";
     if (!rawUrl) return;
-    const isImage = /\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(rawUrl);
-    const contentType = isImage ? "image" : "direct_video";
-    let title = "Custom Media";
-    try {
-      const u = new URL(rawUrl, window.location.origin);
-      const base = u.pathname.split("/").pop() || "";
-      if (base) title = base.replace(/\.[^.]+$/, "").slice(0, 40) || title;
-    } catch {}
+    const ytId = extractYouTubeId(rawUrl);
+    const isImage = !ytId && /\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(rawUrl);
+    const contentType = ytId ? "youtube" : isImage ? "image" : "direct_video";
+    const resolvedUrl = ytId || rawUrl;
+    let title = ytId ? `YouTube Stream (${ytId})` : "Custom Media";
+    if (!ytId) {
+      try {
+        const u = new URL(rawUrl, window.location.origin);
+        const base = u.pathname.split("/").pop() || "";
+        if (base) title = base.replace(/\.[^.]+$/, "").slice(0, 40) || title;
+      } catch {}
+    }
 
     let serverId: string | undefined;
     try {
       const res = await fetch("/api/videos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, contentUrl: rawUrl, contentType }),
+        body: JSON.stringify({ title, contentUrl: resolvedUrl, contentType }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -524,12 +552,13 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       }
     } catch {}
 
+    const localType = ytId ? "youtube" : isImage ? "image" : "video";
     const newUpload = {
       id: serverId || `upload-${Date.now()}`,
       serverId,
       title,
-      contentUrl: rawUrl,
-      contentType: isImage ? "image" : "video",
+      contentUrl: resolvedUrl,
+      contentType: localType,
       uploadDate: new Date().toISOString(),
     };
     try {
@@ -540,7 +569,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
     renderCustomUploads();
     document.dispatchEvent(new CustomEvent("change-background", {
-      detail: { type: isImage ? "image" : "video", url: rawUrl, title, id: newUpload.id }
+      detail: { type: localType, url: resolvedUrl, title, id: newUpload.id }
     }));
     if (customUrlInput) customUrlInput.value = "";
     drawer?.classList.add("-translate-x-full");

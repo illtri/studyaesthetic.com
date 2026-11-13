@@ -42,7 +42,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     const title = typeof body?.title === 'string' ? body.title : '';
     const contentUrl = typeof body?.contentUrl === 'string' ? body.contentUrl : '';
-    const contentType = body?.contentType === 'image' ? 'image' : 'direct_video';
+    const contentType =
+      body?.contentType === 'image'
+        ? 'image'
+        : body?.contentType === 'youtube'
+        ? 'youtube'
+        : 'direct_video';
     const thumbnailUrl = typeof body?.thumbnailUrl === 'string' ? body.thumbnailUrl : undefined;
     const category = (typeof body?.category === 'string' ? body.category : 'Custom') as BackgroundCat;
     const description = typeof body?.description === 'string' ? body.description : undefined;

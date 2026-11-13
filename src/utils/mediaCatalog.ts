@@ -308,6 +308,159 @@ export const SEED_VIDEOS: VideoEntry[] = [
     activeUsers: '880',
     presetSounds: { campfire: 70, wind: 30, synthwave: 25 },
   },
+  // ── Curated YouTube Live & Study Streams ──────────────────────
+  {
+    id: 'yt-chillhop-radio',
+    title: 'Chillhop Radio — Jazzy & Lofi Beats',
+    description: '24/7 jazzy and lofi hip hop radio stream by Chillhop Music.',
+    category: 'Cafes',
+    tags: ['youtube', 'live', 'chillhop', 'lofi', 'jazz', 'radio'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/5yx6BWlEVcY/hqdefault.jpg',
+    contentUrl: '5yx6BWlEVcY',
+    contentType: 'youtube',
+    uploadDate: '2025-02-20',
+    viewCount: 64000,
+    creatorInfo: 'Chillhop Music',
+    status: 'active',
+    isFeatured: true,
+    isTrending: true,
+    isNew: true,
+    activeUsers: '6.4k',
+    presetSounds: { rain: 20, cafe: 25 },
+  },
+  {
+    id: 'yt-synthwave-radio',
+    title: 'Lofi Girl — Synthwave Radio',
+    description: '24/7 retro synthwave beats to chill, code, or game to.',
+    category: 'City & Travel',
+    tags: ['youtube', 'live', 'lofi girl', 'synthwave', 'retro', 'coding'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/4xDzrJKXOOY/hqdefault.jpg',
+    contentUrl: '4xDzrJKXOOY',
+    contentType: 'youtube',
+    uploadDate: '2025-02-20',
+    viewCount: 58000,
+    creatorInfo: 'Lofi Girl',
+    status: 'active',
+    isFeatured: true,
+    isTrending: true,
+    isNew: true,
+    activeUsers: '5.8k',
+    presetSounds: { keyboard: 25 },
+  },
+  {
+    id: 'yt-1am-study',
+    title: 'Lofi Girl — 1 A.M Study Session',
+    description: 'Late-night animated study room session with deep lofi hip hop beats.',
+    category: 'Cozy Rooms',
+    tags: ['youtube', 'lofi girl', 'study session', 'night', 'anime', 'cozy'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/lTRiuFIWV54/hqdefault.jpg',
+    contentUrl: 'lTRiuFIWV54',
+    contentType: 'youtube',
+    uploadDate: '2025-02-18',
+    viewCount: 72000,
+    creatorInfo: 'Lofi Girl',
+    status: 'active',
+    isFeatured: true,
+    isTrending: true,
+    isNew: false,
+    activeUsers: '7.2k',
+    presetSounds: { rain: 30 },
+  },
+  {
+    id: 'yt-chillhop-study',
+    title: 'Chillhop — Study & Relax Radio',
+    description: 'Cozy animated raccoon desk stream with relaxing instrumental beats.',
+    category: 'Cozy Rooms',
+    tags: ['youtube', 'live', 'chillhop', 'study', 'relax', 'lofi'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/7NOSDKb0HlU/hqdefault.jpg',
+    contentUrl: '7NOSDKb0HlU',
+    contentType: 'youtube',
+    uploadDate: '2025-02-19',
+    viewCount: 41000,
+    creatorInfo: 'Chillhop Music',
+    status: 'active',
+    isFeatured: false,
+    isTrending: true,
+    isNew: true,
+    activeUsers: '4.1k',
+    presetSounds: { rain: 20 },
+  },
+  {
+    id: 'yt-lofi-sleep',
+    title: 'Lofi Girl — Sleep & Chill Radio',
+    description: '24/7 soothing ambient lofi stream in a peaceful night bedroom.',
+    category: 'Cozy Rooms',
+    tags: ['youtube', 'live', 'lofi girl', 'sleep', 'chill', 'night'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/DWcJFNfaw9c/hqdefault.jpg',
+    contentUrl: 'DWcJFNfaw9c',
+    contentType: 'youtube',
+    uploadDate: '2025-02-17',
+    viewCount: 39000,
+    creatorInfo: 'Lofi Girl',
+    status: 'active',
+    isFeatured: false,
+    isTrending: false,
+    isNew: true,
+    activeUsers: '3.9k',
+    presetSounds: { rain: 25, wind: 15 },
+  },
+  {
+    id: 'yt-best-of-lofi',
+    title: 'Lofi Girl — Golden Hour Study Mix',
+    description: 'Warm sunset study room with classic lofi hip hop instrumentals.',
+    category: 'Cozy Rooms',
+    tags: ['youtube', 'lofi girl', 'golden hour', 'study', 'warm'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/n61ULEU7CO0/hqdefault.jpg',
+    contentUrl: 'n61ULEU7CO0',
+    contentType: 'youtube',
+    uploadDate: '2025-02-16',
+    viewCount: 45000,
+    creatorInfo: 'Lofi Girl',
+    status: 'active',
+    isFeatured: false,
+    isTrending: false,
+    isNew: false,
+    activeUsers: '4.5k',
+    presetSounds: { birds: 20 },
+  },
+  {
+    id: 'yt-fireplace-4k',
+    title: 'Cozy Fireplace Ambience 4K',
+    description: 'Warm crackling hearth stream for deep reading and winter study.',
+    category: 'Nature & Rain',
+    tags: ['youtube', 'fireplace', 'cabin', 'cozy', 'warm', '4k'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/L_LUpnjgPso/hqdefault.jpg',
+    contentUrl: 'L_LUpnjgPso',
+    contentType: 'youtube',
+    uploadDate: '2025-02-14',
+    viewCount: 34000,
+    creatorInfo: 'Fireplace Atmosphere',
+    status: 'active',
+    isFeatured: false,
+    isTrending: false,
+    isNew: true,
+    activeUsers: '3.4k',
+    presetSounds: { campfire: 65, rain: 30 },
+  },
+  {
+    id: 'yt-classical-study',
+    title: 'Classical Study Hall — Mozart & Vivaldi',
+    description: 'Timeless classical masterpieces for deep concentration and reading.',
+    category: 'Cafes',
+    tags: ['youtube', 'classical', 'mozart', 'vivaldi', 'piano', 'study'],
+    thumbnailUrl: 'https://i.ytimg.com/vi/BMuknRb7woc/hqdefault.jpg',
+    contentUrl: 'BMuknRb7woc',
+    contentType: 'youtube',
+    uploadDate: '2025-02-12',
+    viewCount: 51000,
+    creatorInfo: 'Halidon Music',
+    status: 'active',
+    isFeatured: true,
+    isTrending: true,
+    isNew: false,
+    activeUsers: '5.1k',
+    presetSounds: { rain: 15 },
+  },
   // ── Static Image Backgrounds ──────────────────────────────────
   {
     id: 'static-minimal-dark',
@@ -544,9 +697,33 @@ export function sanitizeTitle(raw: string, fallback = 'Untitled Space'): string 
   return cleaned || fallback;
 }
 
+export function extractYouTubeId(input: string): string | null {
+  const trimmed = (input || '').trim();
+  if (!trimmed) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.split('/').filter(Boolean)[0] || '';
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+      const vParam = parsed.searchParams.get('v');
+      if (vParam && /^[a-zA-Z0-9_-]{11}$/.test(vParam)) return vParam;
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if ((parts[0] === 'embed' || parts[0] === 'live' || parts[0] === 'shorts' || parts[0] === 'v') && parts[1]) {
+        return /^[a-zA-Z0-9_-]{11}$/.test(parts[1]) ? parts[1] : null;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export function isSafeMediaUrl(url: string): boolean {
-  const trimmed = url.trim();
+  const trimmed = (url || '').trim();
   if (!trimmed) return false;
+  if (extractYouTubeId(trimmed)) return true;
   if (trimmed.startsWith('/')) return !trimmed.startsWith('//');
   try {
     const parsed = new URL(trimmed);
@@ -563,6 +740,10 @@ export function filterVideos(videos: VideoEntry[], query: string, category?: str
     const matchesCat =
       !category || category === 'All Spaces' || category === 'All'
         ? true
+        : category === 'YouTube Live'
+        ? v.contentType === 'youtube'
+        : category === 'Instant MP4'
+        ? v.contentType === 'direct_video'
         : category === 'Trending'
         ? v.isTrending
         : category === 'New Spaces'
@@ -581,7 +762,7 @@ export function filterVideos(videos: VideoEntry[], query: string, category?: str
 
 /**
  * Merges seeded catalog entries with stored entries:
- * - Upgrades any legacy `youtube` seed items so users immediately get instant local MP4 playback.
+ * - Upgrades any legacy `youtube` seed items that were replaced by local MP4s while keeping curated `yt-*` YouTube streams.
  * - Preserves viewCounts and user-added custom videos.
  */
 export function mergeSeedWithStored(stored: VideoEntry[]): VideoEntry[] {

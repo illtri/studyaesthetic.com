@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   SEED_SOUNDS,
   SEED_VIDEOS,
+  extractYouTubeId,
   isSafeMediaUrl,
   mergeSeedWithStored,
   sanitizeTitle,
@@ -25,7 +26,7 @@ let writeChain: Promise<void> = Promise.resolve();
 
 function createInitialPayload(): MediaDatabasePayload {
   return {
-    version: 2,
+    version: 3,
     updatedAt: new Date().toISOString(),
     videos: SEED_VIDEOS,
     sounds: SEED_SOUNDS,
@@ -51,13 +52,13 @@ async function ensureDatabaseFile(): Promise<MediaDatabasePayload> {
     }
 
     const payload: MediaDatabasePayload = {
-      version: 2,
+      version: 3,
       updatedAt: parsed.updatedAt || new Date().toISOString(),
       videos: mergedVideos,
       sounds: mergedSounds,
     };
 
-    if ((parsed.version ?? 0) < 2 || mergedVideos.length !== storedVideos.length) {
+    if ((parsed.version ?? 0) < 3 || mergedVideos.length !== storedVideos.length) {
       await persistPayload(payload);
     }
 
@@ -106,27 +107,33 @@ export async function addVideoToDb(input: {
   category?: BackgroundCat;
   contentUrl: string;
   thumbnailUrl?: string;
-  contentType: 'direct_video' | 'image';
+  contentType: 'direct_video' | 'image' | 'youtube';
   tags?: string[];
 }): Promise<VideoEntry> {
   if (!isSafeMediaUrl(input.contentUrl)) {
     throw new Error('Invalid media URL');
   }
+  const ytId = extractYouTubeId(input.contentUrl);
+  const resolvedType = ytId ? 'youtube' : input.contentType;
+  const resolvedUrl = ytId || input.contentUrl.trim();
+
   const db = await ensureDatabaseFile();
   const entry: VideoEntry = {
     id: `custom-${Date.now()}`,
-    title: sanitizeTitle(input.title, 'Custom Space'),
+    title: sanitizeTitle(input.title, ytId ? 'YouTube Study Stream' : 'Custom Space'),
     description: sanitizeTitle(input.description || 'Custom study background', 'Custom study background'),
     category: input.category || 'Custom',
     tags: Array.isArray(input.tags) && input.tags.length > 0 ? input.tags.slice(0, 8) : ['custom'],
     thumbnailUrl:
       input.thumbnailUrl && isSafeMediaUrl(input.thumbnailUrl)
         ? input.thumbnailUrl
-        : input.contentType === 'image'
-        ? input.contentUrl
+        : resolvedType === 'youtube' && ytId
+        ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`
+        : resolvedType === 'image'
+        ? resolvedUrl
         : '/videos/thumbs/lofi-cafe.jpg',
-    contentUrl: input.contentUrl.trim(),
-    contentType: input.contentType,
+    contentUrl: resolvedUrl,
+    contentType: resolvedType,
     uploadDate: new Date().toISOString().split('T')[0],
     viewCount: 1,
     creatorInfo: 'User',

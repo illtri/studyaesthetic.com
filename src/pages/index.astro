@@ -80,6 +80,14 @@ const defaultSpace = spaces[0] ?? {
         <span id="space-live-dot" class="w-1.5 h-1.5 rounded-full bg-semantic-success" aria-hidden="true"></span>
         <span>Space: </span>
         <span id="current-space-title" class="text-ink font-semibold">{defaultSpace.title}</span>
+        <button
+          id="yt-audio-toggle"
+          type="button"
+          class="hidden ml-1.5 pl-2 border-l border-white/15 flex items-center gap-1 text-[10px] font-semibold text-red-300 hover:text-white transition cursor-pointer"
+          title="Toggle YouTube stream audio"
+        >
+          <span id="yt-audio-label">YT Audio: Off</span>
+        </button>
       </div>
 
       <!-- Clock, Cloud Sync, & Options -->
@@ -712,7 +720,7 @@ const defaultSpace = spaces[0] ?? {
   exitFocusBtn?.addEventListener("click", exitFocus);
 
   // ════════════════════════════════════════════════════════════════
-  // INSTANT DATABASE VIDEO SYSTEM — Zero YouTube wait
+  // INSTANT DATABASE VIDEO & YOUTUBE STREAM SYSTEM
   // ════════════════════════════════════════════════════════════════
   import {
     getActiveVideos,
@@ -721,10 +729,13 @@ const defaultSpace = spaces[0] ?? {
     syncVideosFromServer,
     warmVideoCache,
   } from '../utils/VideoDatabase';
+  import { extractYouTubeId } from '../utils/mediaCatalog';
 
   let currentSpaceId = "lofi-cafe";
   let currentSpaceTitle = "Lo-Fi Cafe Vibes";
+  let activeMediaType: "direct_video" | "youtube" | "image" = "direct_video";
   let isVideoPlaying = true;
+  let isYtMuted = true;
   let activeBlobUrl: string | null = null;
 
   const loadingOverlay = document.getElementById("video-loading-overlay");
@@ -734,15 +745,31 @@ const defaultSpace = spaces[0] ?? {
   const spaceLiveDot   = document.getElementById("space-live-dot");
   const videoPlayBtn   = document.getElementById("dock-btn-video-play");
   const playVideoIcon  = document.getElementById("play-video-icon");
+  const ytAudioToggle  = document.getElementById("yt-audio-toggle");
+  const ytAudioLabel   = document.getElementById("yt-audio-label");
 
   const PAUSE_SVG = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
   const PLAY_SVG  = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
+
+  function sendYouTubeCommand(func: string, args: any[] = []) {
+    const iframe = document.getElementById("bg-yt-iframe") as HTMLIFrameElement | null;
+    if (!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event: "command", func, args }),
+      "*"
+    );
+  }
+
+  function removeYouTubeIframe() {
+    const iframe = document.getElementById("bg-yt-iframe");
+    if (iframe) iframe.remove();
+    ytAudioToggle?.classList.add("hidden");
+  }
 
   function getOrCreateBgVideo(): HTMLVideoElement | null {
     if (!playerWrap) return null;
     let vid = document.getElementById("bg-video") as HTMLVideoElement | null;
     if (!vid) {
-      playerWrap.innerHTML = "";
       vid = document.createElement("video");
       vid.id = "bg-video";
       vid.autoplay = true;
@@ -757,7 +784,79 @@ const defaultSpace = spaces[0] ?? {
     return vid;
   }
 
+  function playYouTubeStream(urlOrId: string, title?: string, id?: string) {
+    const ytId = extractYouTubeId(urlOrId) || urlOrId;
+    if (!ytId) return;
+
+    activeMediaType = "youtube";
+    isYtMuted = true;
+    loadingOverlay?.classList.add("hidden");
+
+    const vid = document.getElementById("bg-video") as HTMLVideoElement | null;
+    if (vid) {
+      vid.pause();
+      vid.style.display = "none";
+    }
+
+    if (bgWrapper) {
+      bgWrapper.style.backgroundImage = `url('https://i.ytimg.com/vi/${ytId}/hqdefault.jpg')`;
+      bgWrapper.style.backgroundSize = "cover";
+      bgWrapper.style.backgroundPosition = "center";
+      bgWrapper.classList.remove("animated-bg-fallback");
+    }
+
+    if (playerWrap) {
+      playerWrap.style.display = "";
+      let iframe = document.getElementById("bg-yt-iframe") as HTMLIFrameElement | null;
+      if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "bg-yt-iframe";
+        iframe.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture");
+        iframe.setAttribute("allowfullscreen", "true");
+        iframe.setAttribute("title", title || "YouTube Study Stream");
+        iframe.style.cssText = "position:absolute;top:50%;left:50%;width:max(100vw,177.78vh);height:max(100vh,56.25vw);transform:translate(-50%,-50%);pointer-events:none;border:0;";
+        playerWrap.appendChild(iframe);
+      }
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${ytId}&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1`;
+      if (iframe.src !== embedUrl) {
+        iframe.src = embedUrl;
+      }
+    }
+
+    isVideoPlaying = true;
+    if (id) currentSpaceId = id;
+    if (title) {
+      currentSpaceTitle = title;
+      if (spaceTitleEl) spaceTitleEl.textContent = title;
+    }
+    if (spaceLiveDot) {
+      spaceLiveDot.classList.remove("bg-surface-3", "bg-primary");
+      spaceLiveDot.classList.add("bg-semantic-success");
+    }
+    if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
+    if (ytAudioToggle) {
+      ytAudioToggle.classList.remove("hidden");
+      if (ytAudioLabel) ytAudioLabel.textContent = "YT Audio: Off";
+    }
+  }
+
+  ytAudioToggle?.addEventListener("click", () => {
+    if (activeMediaType !== "youtube") return;
+    isYtMuted = !isYtMuted;
+    if (isYtMuted) {
+      sendYouTubeCommand("mute");
+      if (ytAudioLabel) ytAudioLabel.textContent = "YT Audio: Off";
+    } else {
+      sendYouTubeCommand("unMute");
+      sendYouTubeCommand("setVolume", [70]);
+      if (ytAudioLabel) ytAudioLabel.textContent = "YT Audio: On";
+    }
+  });
+
   async function playLocalVideo(url: string, title?: string, id?: string) {
+    activeMediaType = "direct_video";
+    removeYouTubeIframe();
+
     if (bgWrapper) {
       bgWrapper.style.backgroundImage = "";
       bgWrapper.classList.add("animated-bg-fallback");
@@ -766,6 +865,7 @@ const defaultSpace = spaces[0] ?? {
 
     const vid = getOrCreateBgVideo();
     if (!vid) return;
+    vid.style.display = "";
 
     const isRemote = !url.startsWith("/") && !url.startsWith("blob:");
     if (isRemote) loadingOverlay?.classList.remove("hidden");
@@ -811,6 +911,18 @@ const defaultSpace = spaces[0] ?? {
 
   // Video play/pause toggle
   videoPlayBtn?.addEventListener("click", () => {
+    if (activeMediaType === "youtube") {
+      if (isVideoPlaying) {
+        sendYouTubeCommand("pauseVideo");
+        isVideoPlaying = false;
+      } else {
+        sendYouTubeCommand("playVideo");
+        isVideoPlaying = true;
+      }
+      if (playVideoIcon) playVideoIcon.innerHTML = isVideoPlaying ? PAUSE_SVG : PLAY_SVG;
+      return;
+    }
+
     const vid = getOrCreateBgVideo();
     if (!vid) return;
     if (vid.paused) {
@@ -825,24 +937,32 @@ const defaultSpace = spaces[0] ?? {
 
   // Space change event (from SpacesDrawer)
   document.addEventListener("change-space", (e: any) => {
-    const { id, contentUrl, videoId, title } = e.detail || {};
+    const { id, contentUrl, contentType, videoId, title } = e.detail || {};
     const targetUrl = contentUrl || (videoId ? `/videos/${id || "lofi-cafe"}.mp4` : "");
     if (!targetUrl) return;
-    playLocalVideo(targetUrl, title, id);
+
+    const isYt = contentType === "youtube" || Boolean(extractYouTubeId(targetUrl));
+    if (isYt) {
+      playYouTubeStream(targetUrl, title, id);
+    } else {
+      playLocalVideo(targetUrl, title, id);
+    }
 
     try {
       const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
       prefs.selectedBackground     = id;
-      prefs.selectedBackgroundType = "direct_video";
+      prefs.selectedBackgroundType = isYt ? "youtube" : "direct_video";
       localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
     } catch {}
   });
 
-  // Background image or custom video handler
+  // Background image or custom video/YouTube handler
   document.addEventListener("change-background", (e: any) => {
     const { type, url, title, id } = e.detail || {};
 
     if (type === "image") {
+      activeMediaType = "image";
+      removeYouTubeIframe();
       const vid = document.getElementById("bg-video") as HTMLVideoElement | null;
       if (vid) vid.pause();
       if (playerWrap) playerWrap.style.display = "none";
@@ -860,6 +980,8 @@ const defaultSpace = spaces[0] ?? {
       }
       isVideoPlaying = false;
       if (playVideoIcon) playVideoIcon.innerHTML = PLAY_SVG;
+    } else if (type === "youtube" || Boolean(extractYouTubeId(url || ""))) {
+      playYouTubeStream(url, title, id);
     } else if (type === "video" || type === "direct_video") {
       playLocalVideo(url, title, id);
     }
@@ -883,6 +1005,8 @@ const defaultSpace = spaces[0] ?? {
         document.dispatchEvent(new CustomEvent("change-background", {
           detail: { type: "image", url: entry.contentUrl, title: entry.title, id: entry.id }
         }));
+      } else if (entry.contentType === "youtube") {
+        playYouTubeStream(entry.contentUrl, entry.title, entry.id);
       } else if (entry.contentType === "direct_video") {
         playLocalVideo(entry.contentUrl, entry.title, entry.id);
       }
