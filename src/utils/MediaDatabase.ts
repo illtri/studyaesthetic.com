@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import {
   SEED_SOUNDS,
@@ -19,25 +20,47 @@ interface MediaDatabasePayload {
   sounds: SoundEntry[];
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-const DB_PATH = path.join(DATA_DIR, 'media-db.json');
+const LOCAL_DATA_DIR = path.resolve(process.cwd(), 'data');
+const LOCAL_DB_PATH = path.join(LOCAL_DATA_DIR, 'media-db.json');
 
+const TMP_DATA_DIR = path.join(os.tmpdir(), 'studyaesthetic-data');
+const TMP_DB_PATH = path.join(TMP_DATA_DIR, 'media-db.json');
+
+let memoryDb: MediaDatabasePayload | null = null;
 let writeChain: Promise<void> = Promise.resolve();
 
 function createInitialPayload(): MediaDatabasePayload {
   return {
     version: 3,
     updatedAt: new Date().toISOString(),
-    videos: SEED_VIDEOS,
-    sounds: SEED_SOUNDS,
+    videos: SEED_VIDEOS.map((v) => ({ ...v })),
+    sounds: SEED_SOUNDS.map((s) => ({ ...s })),
   };
 }
 
-async function ensureDatabaseFile(): Promise<MediaDatabasePayload> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+async function readJsonIfExists(filePath: string): Promise<Partial<MediaDatabasePayload> | null> {
   try {
-    const raw = await fs.readFile(DB_PATH, 'utf8');
-    const parsed = JSON.parse(raw) as Partial<MediaDatabasePayload>;
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as Partial<MediaDatabasePayload>;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureDatabaseFile(): Promise<MediaDatabasePayload> {
+  try {
+    const parsed =
+      (await readJsonIfExists(TMP_DB_PATH)) ??
+      (await readJsonIfExists(LOCAL_DB_PATH));
+
+    if (!parsed) {
+      if (!memoryDb) {
+        memoryDb = createInitialPayload();
+        await persistPayload(memoryDb);
+      }
+      return memoryDb;
+    }
+
     const storedVideos = Array.isArray(parsed.videos) ? parsed.videos : [];
     const mergedVideos = mergeSeedWithStored(storedVideos);
 
@@ -58,26 +81,46 @@ async function ensureDatabaseFile(): Promise<MediaDatabasePayload> {
       sounds: mergedSounds,
     };
 
+    memoryDb = payload;
+
     if ((parsed.version ?? 0) < 3 || mergedVideos.length !== storedVideos.length) {
       await persistPayload(payload);
     }
 
     return payload;
   } catch {
-    const initial = createInitialPayload();
-    await persistPayload(initial);
-    return initial;
+    if (!memoryDb) {
+      memoryDb = createInitialPayload();
+    }
+    return memoryDb;
+  }
+}
+
+async function tryWriteDbFile(dirPath: string, filePath: string, serialized: string): Promise<boolean> {
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+    const tmpPath = `${filePath}.${process.pid}.tmp`;
+    await fs.writeFile(tmpPath, serialized, 'utf8');
+    await fs.rename(tmpPath, filePath);
+    return true;
+  } catch {
+    return false;
   }
 }
 
 async function persistPayload(payload: MediaDatabasePayload): Promise<void> {
+  memoryDb = payload;
+  const serialized = JSON.stringify(payload, null, 2);
+
   const next = writeChain.then(async () => {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    const tmpPath = `${DB_PATH}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
-    await fs.rename(tmpPath, DB_PATH);
-  });
-  writeChain = next.catch(() => {});
+    // Try writing to project data/ first (local dev), fallback to os.tmpdir() on read-only serverless (Vercel)
+    const wroteLocal = await tryWriteDbFile(LOCAL_DATA_DIR, LOCAL_DB_PATH, serialized);
+    if (!wroteLocal) {
+      await tryWriteDbFile(TMP_DATA_DIR, TMP_DB_PATH, serialized);
+    }
+  }).catch(() => {});
+
+  writeChain = next;
   return next;
 }
 

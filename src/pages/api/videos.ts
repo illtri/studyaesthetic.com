@@ -5,21 +5,33 @@ import {
   getVideosFromDb,
   incrementViewInDb,
 } from '../../utils/MediaDatabase';
-import type { BackgroundCat } from '../../utils/mediaCatalog';
+import { SEED_VIDEOS, type BackgroundCat } from '../../utils/mediaCatalog';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
-  const videos = await getVideosFromDb();
-  const type = url.searchParams.get('type');
-  const filtered = type ? videos.filter((v) => v.contentType === type) : videos;
-  return new Response(JSON.stringify({ videos: filtered }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-    },
-  });
+  try {
+    const videos = await getVideosFromDb();
+    const type = url.searchParams.get('type');
+    const filtered = type ? videos.filter((v) => v.contentType === type) : videos;
+    return new Response(JSON.stringify({ videos: filtered }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch {
+    const type = url.searchParams.get('type');
+    const filtered = type ? SEED_VIDEOS.filter((v) => v.contentType === type) : SEED_VIDEOS;
+    return new Response(JSON.stringify({ videos: filtered }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
 };
 
 export const POST: APIRoute = async ({ request }) => {
