@@ -8,6 +8,7 @@ import TasksWidget from '../components/TasksWidget.astro';
 import NotesWidget from '../components/NotesWidget.astro';
 import BreathingWidget from '../components/BreathingWidget.astro';
 import StatsWidget from '../components/StatsWidget.astro';
+import SpotifyWidget from '../components/SpotifyWidget.astro';
 import LoginModal from '../components/LoginModal.astro';
 import { getSpaceVideosFromDb } from '../utils/MediaDatabase';
 
@@ -114,18 +115,18 @@ const defaultSpace = spaces[0] ?? {
           </button>
 
           <!-- Signed In User Menu (Hidden initially) -->
-          <div id="user-profile-badge" class="hidden flex items-center gap-2 px-2 py-0.5 bg-white/5 border border-white/5 rounded-full hover:bg-white/10 transition cursor-pointer select-none">
+          <div id="user-profile-badge" class="hidden items-center gap-2 px-2.5 py-1 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition cursor-pointer select-none">
             <img id="user-avatar" class="w-5 h-5 rounded-full object-cover border border-white/10 bg-surface-3" src="" alt="avatar" />
-            <span id="user-name" class="text-xs font-semibold text-ink-muted">Guest</span>
+            <span id="user-name" class="text-xs font-semibold text-ink">Guest</span>
           </div>
 
           <!-- Dropdown Menu -->
-          <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-48 rounded-xl shadow-xl glass border border-hairline/80 py-1.5 hidden flex-col z-50 translate-y-1 transition duration-200">
-            <div class="px-3.5 py-2 border-b border-hairline shrink-0">
-              <p class="text-[10px] font-bold text-ink-subtle uppercase tracking-wider">Account</p>
+          <div id="user-dropdown-menu" class="absolute right-0 mt-2 w-52 rounded-xl shadow-xl glass border border-hairline/80 py-1.5 hidden flex-col z-50 translate-y-1 transition duration-200">
+            <div class="px-3.5 py-2.5 border-b border-hairline shrink-0">
+              <p id="dropdown-auth-provider" class="text-[11px] font-medium text-ink-subtle">Account</p>
               <p id="dropdown-user-email" class="text-xs text-ink truncate font-medium mt-0.5">user@example.com</p>
             </div>
-            <button id="btn-sign-out" class="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-white/[0.03] transition cursor-pointer flex items-center gap-2">
+            <button id="btn-sign-out" type="button" class="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-white/[0.03] transition cursor-pointer flex items-center gap-2">
               <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
               </svg>
@@ -140,6 +141,7 @@ const defaultSpace = spaces[0] ?? {
     <main id="workspace" class="flex-1 w-full relative overflow-hidden" role="main" aria-label="Widget workspace">
       <TimerWidget />
       <SoundboardWidget />
+      <SpotifyWidget />
       <TasksWidget />
       <NotesWidget />
       <BreathingWidget />
@@ -150,102 +152,131 @@ const defaultSpace = spaces[0] ?? {
 
     <!-- ── Left Sidebar Dock ──────────────────────────────── -->
     <aside id="app-dock-container" aria-label="Widget dock">
-      <div class="dock-inner glass rounded-2xl py-4 px-2.5 flex flex-col items-center gap-3.5">
+      <div id="dock-inner" class="dock-inner glass rounded-2xl py-2.5 px-2 flex flex-col items-center gap-1.5" data-collapsed="false">
 
-        <!-- Spaces Explorer -->
-        <button id="dock-btn-explore" class="dock-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Explore spaces">
-          <div class="w-9 h-9 rounded-full bg-surface-2/80 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
-            <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Spaces Explorer (Always visible at top) -->
+        <button id="dock-btn-explore" class="dock-btn group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Explore spaces">
+          <div class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight">Spaces</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Spaces</span>
         </button>
 
-        <div class="w-6 h-px bg-hairline rounded-full my-0.5" role="separator"></div>
+        <div class="w-5 h-px bg-hairline rounded-full my-0.5 shrink-0" role="separator"></div>
 
-        <!-- Timer -->
-        <button data-widget-id="timer-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle timer" aria-pressed="true">
-          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Timer (Always visible) -->
+        <button data-widget-id="timer-widget" class="dock-widget-btn group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle timer" aria-pressed="true">
+          <div class="btn-ring w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Timer</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight text-ink">Timer</span>
         </button>
 
-        <!-- Stats -->
-        <button data-widget-id="stats-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle study statistics" aria-pressed="false">
-          <div class="btn-ring w-9 h-9 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-          </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight">Stats</span>
-        </button>
-
-        <!-- Sounds -->
-        <button data-widget-id="soundboard-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle ambient sounds" aria-pressed="true">
-          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Sounds (Always visible) -->
+        <button data-widget-id="soundboard-widget" class="dock-widget-btn group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle ambient sounds" aria-pressed="true">
+          <div class="btn-ring w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Sounds</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight text-ink">Sounds</span>
         </button>
 
-        <!-- Tasks -->
-        <button data-widget-id="tasks-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle tasks" aria-pressed="true">
-          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Stats (Collapsible) -->
+        <button data-widget-id="stats-widget" class="dock-widget-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle study statistics" aria-pressed="false">
+          <div class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Stats</span>
+        </button>
+
+        <!-- Spotify (Collapsible) -->
+        <button data-widget-id="spotify-widget" class="dock-widget-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle Spotify music player" aria-pressed="true">
+          <div class="btn-ring w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-primary-hover" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+            </svg>
+          </div>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight text-ink">Spotify</span>
+        </button>
+
+        <!-- Tasks (Collapsible) -->
+        <button data-widget-id="tasks-widget" class="dock-widget-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle tasks" aria-pressed="true">
+          <div class="btn-ring w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Tasks</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight text-ink">Tasks</span>
         </button>
 
-        <!-- Notes -->
-        <button data-widget-id="notes-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle notes" aria-pressed="true">
-          <div class="btn-ring w-9 h-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Notes (Collapsible) -->
+        <button data-widget-id="notes-widget" class="dock-widget-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle notes" aria-pressed="true">
+          <div class="btn-ring w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight text-ink">Notes</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight text-ink">Notes</span>
         </button>
 
-        <!-- Breathing -->
-        <button data-widget-id="breathing-widget" class="dock-widget-btn group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle breathing guide" aria-pressed="false">
-          <div class="btn-ring w-9 h-9 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
-            <svg class="btn-icon w-4.5 h-4.5 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Breathing (Collapsible) -->
+        <button data-widget-id="breathing-widget" class="dock-widget-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle breathing guide" aria-pressed="false">
+          <div class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 border border-hairline group-hover:bg-primary/20 group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg class="btn-icon w-4 h-4 text-ink-muted group-hover:text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9" stroke-width="1.5" stroke-dasharray="3 3"/>
               <circle cx="12" cy="12" r="5" stroke-width="2"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight">Breathe</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Breathe</span>
         </button>
 
-        <div class="w-6 h-px bg-hairline rounded-full my-0.5" role="separator"></div>
+        <div class="dock-collapsible w-5 h-px bg-hairline rounded-full my-0.5 shrink-0" role="separator"></div>
 
-        <!-- Video Toggle -->
-        <button id="dock-btn-video-play" class="group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Play or pause background video">
-          <div class="w-9 h-9 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
-            <svg id="play-video-icon" class="w-4.5 h-4.5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Video Toggle (Collapsible) -->
+        <button id="dock-btn-video-play" class="dock-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Play or pause background video">
+          <div class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
+            <svg id="play-video-icon" class="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight">Video</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Video</span>
         </button>
 
-        <!-- Focus Mode -->
-        <button id="dock-btn-focus" class="group flex flex-col items-center gap-1 text-ink-subtle hover:text-ink transition cursor-pointer" aria-label="Toggle focus mode">
-          <div class="w-9 h-9 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
-            <svg class="w-4.5 h-4.5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <!-- Focus Mode (Collapsible) -->
+        <button id="dock-btn-focus" class="dock-btn dock-collapsible group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0" aria-label="Toggle focus mode">
+          <div class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 hover:bg-surface-3 border border-hairline flex items-center justify-center transition">
+            <svg class="w-4 h-4 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
             </svg>
           </div>
-          <span class="text-[10px] font-sans font-medium tracking-tight">Focus</span>
+          <span class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Focus</span>
+        </button>
+
+        <div class="w-5 h-px bg-hairline rounded-full my-0.5 shrink-0" role="separator"></div>
+
+        <!-- Collapse / Expand Toggle Button -->
+        <button
+          id="dock-collapse-toggle"
+          type="button"
+          class="dock-btn group flex flex-col items-center gap-0.5 text-ink-subtle hover:text-ink transition cursor-pointer shrink-0"
+          aria-label="Collapse or expand dock"
+          aria-expanded="true"
+          title="Collapse dock"
+        >
+          <div id="dock-collapse-ring" class="btn-ring w-8 h-8 rounded-full bg-surface-2/80 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
+            <svg id="dock-collapse-icon" class="w-4 h-4 text-ink-muted group-hover:text-primary-hover transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+            </svg>
+          </div>
+          <span id="dock-collapse-label" class="text-[9.5px] leading-tight font-sans font-medium tracking-tight">Collapse</span>
         </button>
       </div>
     </aside>
@@ -448,19 +479,34 @@ const defaultSpace = spaces[0] ?? {
     el.classList.add("is-active");
   }
 
+  function isUserSignedIn(): boolean {
+    try {
+      const raw = localStorage.getItem("sa_user_profile_v1");
+      if (!raw) return false;
+      return isAuthenticatedProfile(JSON.parse(raw));
+    } catch {
+      return false;
+    }
+  }
+
   // ── Init all widgets ────────────────────────────────────────────
   function initWidgets() {
     const saved = loadPositions();
+    const signedIn = isUserSignedIn();
     document.querySelectorAll<HTMLElement>(".widget-island").forEach(el => {
       const id       = el.id;
       const defaultX = parseInt(el.getAttribute("data-default-x") || "100");
       const defaultY = parseInt(el.getAttribute("data-default-y") || "80");
 
       const savedState = saved[id];
+      const defaultVisible = id !== "breathing-widget" && id !== "stats-widget";
+      const desiredVisible = savedState?.visible !== undefined ? savedState.visible : defaultVisible;
+      const allowed = canAccessWidget(id, signedIn);
+
       const state: WidgetState = {
         x:       savedState?.x       ?? (DOCK_WIDTH + defaultX),
         y:       savedState?.y       ?? defaultY,
-        visible: savedState?.visible !== undefined ? savedState.visible : (id !== "breathing-widget" && id !== "stats-widget"),
+        visible: allowed ? desiredVisible : false,
       };
       widgetStates[id] = state;
 
@@ -474,12 +520,15 @@ const defaultSpace = spaces[0] ?? {
         el.classList.add("is-hidden");
       }
     });
-    savePositions();
+    if (signedIn) {
+      savePositions();
+    }
     syncDockButtons();
   }
 
   // ── Sync Dock Buttons with Current Widget States ────────────────
   function syncDockButtons() {
+    const signedIn = isUserSignedIn();
     document.querySelectorAll<HTMLButtonElement>(".dock-widget-btn").forEach(btn => {
       const targetId = btn.getAttribute("data-widget-id") || "";
       const state    = widgetStates[targetId];
@@ -488,7 +537,24 @@ const defaultSpace = spaces[0] ?? {
       const ring  = btn.querySelector<HTMLElement>(".btn-ring");
       const icon  = btn.querySelector<HTMLElement>(".btn-icon");
       const label = btn.querySelector<HTMLElement>("span");
-      const visible = state.visible;
+      const allowed = canAccessWidget(targetId, signedIn);
+      const visible = allowed && state.visible;
+
+      if (ring) {
+        ring.classList.add("relative");
+        let lockBadge = ring.querySelector<HTMLElement>(".dock-lock-badge");
+        if (!allowed) {
+          if (!lockBadge) {
+            lockBadge = document.createElement("span");
+            lockBadge.className =
+              "dock-lock-badge absolute -top-1 -right-1 w-4 h-4 rounded-full bg-surface-3 border border-hairline-strong flex items-center justify-center text-[9px] text-ink-muted shadow";
+            lockBadge.innerHTML = `<svg class="w-2.5 h-2.5 text-ink-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`;
+            ring.appendChild(lockBadge);
+          }
+        } else if (lockBadge) {
+          lockBadge.remove();
+        }
+      }
 
       btn.setAttribute("aria-pressed", visible.toString());
       if (visible) {
@@ -644,6 +710,16 @@ const defaultSpace = spaces[0] ?? {
       if (!widget) return;
 
       btn.addEventListener("click", () => {
+        if (!canAccessWidget(targetId, isUserSignedIn())) {
+          const featureName = GUEST_LOCKED_WIDGET_NAMES[targetId] || "this feature";
+          document.dispatchEvent(
+            new CustomEvent("open-auth-modal", {
+              detail: { reason: `Sign in to unlock ${featureName} and cloud workspace sync.` },
+            })
+          );
+          return;
+        }
+
         const state = widgetStates[targetId];
         if (!state) return;
 
@@ -701,6 +777,49 @@ const defaultSpace = spaces[0] ?? {
   // ── Spaces drawer ──────────────────────────────────────────────
   document.getElementById("dock-btn-explore")?.addEventListener("click", () => {
     document.getElementById("spaces-drawer")?.classList.toggle("-translate-x-full");
+  });
+
+  // ── Dock Collapse / Expand Toggle ──────────────────────────────
+  const dockInner         = document.getElementById("dock-inner");
+  const dockCollapseBtn   = document.getElementById("dock-collapse-toggle");
+  const dockCollapseIcon  = document.getElementById("dock-collapse-icon");
+  const dockCollapseLabel = document.getElementById("dock-collapse-label");
+  const dockCollapseRing  = document.getElementById("dock-collapse-ring");
+
+  function applyDockCollapsedState(collapsed: boolean) {
+    if (!dockInner) return;
+    dockInner.classList.toggle("is-collapsed", collapsed);
+    dockInner.setAttribute("data-collapsed", collapsed ? "true" : "false");
+    dockCollapseBtn?.setAttribute("aria-expanded", (!collapsed).toString());
+    dockCollapseBtn?.setAttribute("title", collapsed ? "Expand dock" : "Collapse dock");
+    if (dockCollapseLabel) {
+      dockCollapseLabel.textContent = collapsed ? "Expand" : "Collapse";
+    }
+    if (dockCollapseIcon) {
+      dockCollapseIcon.classList.toggle("rotate-180", collapsed);
+    }
+    if (dockCollapseRing) {
+      dockCollapseRing.classList.toggle("bg-primary/20", collapsed);
+      dockCollapseRing.classList.toggle("border-primary/40", collapsed);
+      dockCollapseRing.classList.toggle("bg-surface-2/80", !collapsed);
+      dockCollapseRing.classList.toggle("border-hairline", !collapsed);
+    }
+    if (!collapsed) {
+      dockInner.scrollTop = 0;
+    }
+    try {
+      localStorage.setItem("sa_dock_collapsed_v1", collapsed ? "1" : "0");
+    } catch {}
+  }
+
+  try {
+    const savedCollapsed = localStorage.getItem("sa_dock_collapsed_v1") === "1";
+    applyDockCollapsedState(savedCollapsed);
+  } catch {}
+
+  dockCollapseBtn?.addEventListener("click", () => {
+    const currentlyCollapsed = dockInner?.classList.contains("is-collapsed") ?? false;
+    applyDockCollapsedState(!currentlyCollapsed);
   });
 
   // ── Focus mode ─────────────────────────────────────────────────
@@ -1054,12 +1173,20 @@ const defaultSpace = spaces[0] ?? {
   }
 
   // ── Authentication UI & State Handlers ──────────────────────────
-  const btnLoginTrigger = document.getElementById("btn-login-trigger");
+  import {
+    GUEST_LOCKED_WIDGET_NAMES,
+    canAccessWidget,
+    createAvatarDataUri,
+    isAuthenticatedProfile,
+  } from '../utils/authHelper';
+
+  const btnLoginTrigger  = document.getElementById("btn-login-trigger");
   const userProfileBadge = document.getElementById("user-profile-badge");
   const userDropdownMenu = document.getElementById("user-dropdown-menu");
   const userAvatar       = document.getElementById("user-avatar") as HTMLImageElement;
   const userName         = document.getElementById("user-name");
   const dropdownEmail    = document.getElementById("dropdown-user-email");
+  const dropdownProvider = document.getElementById("dropdown-auth-provider");
   const btnSignOut       = document.getElementById("btn-sign-out");
 
   function syncAuthUI() {
@@ -1071,8 +1198,7 @@ const defaultSpace = spaces[0] ?? {
       }
       const user = JSON.parse(rawUser);
 
-      // Anonymous accounts are treated as signed out for cloud sync/dropdown functions
-      if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
+      if (!isAuthenticatedProfile(user)) {
         showSignedOutUI();
       } else {
         showSignedInUI(user);
@@ -1085,16 +1211,35 @@ const defaultSpace = spaces[0] ?? {
   function showSignedOutUI() {
     btnLoginTrigger?.classList.remove("hidden");
     userProfileBadge?.classList.add("hidden");
+    userProfileBadge?.classList.remove("flex");
     userDropdownMenu?.classList.add("hidden");
+    userDropdownMenu?.classList.remove("flex");
     updateCloudSyncUI("local");
   }
 
   function showSignedInUI(user: any) {
     btnLoginTrigger?.classList.add("hidden");
     userProfileBadge?.classList.remove("hidden");
-    if (userAvatar) userAvatar.src = user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.name}`;
-    if (userName) userName.textContent = user.name.split(' ')[0];
-    if (dropdownEmail) dropdownEmail.textContent = user.email || "guest@studyaesthetic.com";
+    userProfileBadge?.classList.add("flex");
+    const provider = (user.authProvider || "email") as "email" | "google" | "apple" | "demo";
+    if (userAvatar) {
+      const fallbackAvatar = createAvatarDataUri(user.name || "Scholar", provider);
+      userAvatar.src = user.avatarUrl || fallbackAvatar;
+      userAvatar.onerror = () => {
+        userAvatar.src = fallbackAvatar;
+      };
+    }
+    if (userName) userName.textContent = (user.name || "Scholar").split(" ")[0];
+    if (dropdownEmail) dropdownEmail.textContent = user.email || "scholar@studyaesthetic.com";
+    if (dropdownProvider) {
+      const providerLabels: Record<string, string> = {
+        google: "Google Account",
+        apple: "Apple Mail",
+        demo: "Demo Account",
+        email: "Email Account",
+      };
+      dropdownProvider.textContent = providerLabels[provider] || "Account";
+    }
     updateCloudSyncUI("saved");
   }
 

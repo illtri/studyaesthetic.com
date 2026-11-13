@@ -22,7 +22,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  authProvider: 'anonymous' | 'google' | 'github' | 'email';
+  authProvider: 'anonymous' | 'google' | 'apple' | 'github' | 'demo' | 'email';
   avatarUrl?: string;
   createdAt: string;
   lastActiveAt: string;

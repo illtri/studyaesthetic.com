@@ -1,0 +1,552 @@
+---
+import {
+  SEED_SPOTIFY_ITEMS,
+  buildSpotifyEmbedUrl,
+} from '../utils/spotifyCatalog';
+
+const defaultItem = SEED_SPOTIFY_ITEMS[0];
+const defaultEmbedUrl = buildSpotifyEmbedUrl('playlist', defaultItem.spotifyId);
+---
+
+<div
+  id="spotify-widget"
+  class="widget-island glass rounded-xl z-40 edge-highlight"
+  data-widget-key="spotify"
+  data-default-x="760"
+  data-default-y="390"
+  style="width: 340px;"
+>
+  <!-- Handle -->
+  <div class="widget-handle flex items-center justify-between px-4 pt-3.5 pb-3 border-b border-hairline cursor-grab select-none">
+    <div class="flex items-center gap-2 text-ink">
+      <svg class="w-4 h-4 text-[#1DB954] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+      </svg>
+      <span class="text-xs font-semibold tracking-tight font-sans">Spotify Player</span>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button
+        id="spotify-size-toggle"
+        type="button"
+        class="text-[11px] font-medium text-ink-subtle hover:text-ink bg-surface-2/80 hover:bg-surface-3 border border-hairline px-2 py-0.5 rounded transition cursor-pointer whitespace-nowrap shrink-0"
+        title="Toggle compact or expanded player"
+      >
+        Expand
+      </button>
+      <button
+        class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer"
+        aria-label="Minimize Spotify widget"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="p-3.5 flex flex-col gap-3">
+    <!-- Embedded Spotify Iframe Wrap -->
+    <div id="spotify-embed-wrap" class="w-full rounded-xl overflow-hidden bg-surface-1 border border-hairline">
+      <iframe
+        id="spotify-embed-iframe"
+        title="Spotify Music Player"
+        src={defaultEmbedUrl}
+        width="100%"
+        height="152"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        loading="lazy"
+        style="border: 0; border-radius: 12px; display: block;"
+      ></iframe>
+    </div>
+
+    <!-- Built-in Audio Preview Player (shown when playing a searched song preview) -->
+    <div id="spotify-preview-player" class="hidden flex-col gap-2.5 p-3 rounded-xl bg-surface-1 border border-hairline">
+      <div class="flex items-center gap-3">
+        <img
+          id="sp-preview-art"
+          src={defaultItem.thumbnailUrl}
+          alt="Track cover"
+          referrerpolicy="no-referrer"
+          class="w-11 h-11 rounded-lg object-cover bg-surface-2 border border-hairline shrink-0"
+        />
+        <div class="min-w-0 flex-1">
+          <p id="sp-preview-title" class="text-xs font-semibold text-ink truncate">Track Title</p>
+          <p id="sp-preview-artist" class="text-[11px] text-ink-subtle truncate">Artist</p>
+        </div>
+        <button
+          id="sp-preview-play-btn"
+          type="button"
+          class="w-8 h-8 rounded-lg bg-primary hover:bg-primary-hover text-white flex items-center justify-center transition cursor-pointer shrink-0"
+          aria-label="Play or pause song"
+        >
+          <svg id="sp-preview-play-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="flex items-center justify-between gap-2 pt-1 border-t border-hairline/60 text-[11px] text-ink-subtle">
+        <span>Looping audio stream</span>
+        <a
+          id="sp-preview-open-link"
+          href="https://open.spotify.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary-hover hover:underline font-medium whitespace-nowrap"
+        >
+          Find on Spotify ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- Search Song or Paste Spotify Link Form -->
+    <form id="spotify-search-form" class="flex gap-1.5">
+      <input
+        id="spotify-input"
+        type="text"
+        placeholder="Paste Spotify link or search any song…"
+        autocomplete="off"
+        class="flex-1 min-w-0 bg-surface-1 border border-hairline focus:border-primary-focus focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-ink placeholder-ink-subtle font-sans transition"
+      />
+      <button
+        id="spotify-submit-btn"
+        type="submit"
+        class="px-3 py-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium rounded-lg transition cursor-pointer whitespace-nowrap shrink-0"
+      >
+        Search / Add
+      </button>
+    </form>
+    <p id="spotify-status-msg" class="hidden text-[11px] text-ink-subtle px-0.5"></p>
+
+    <!-- Segmented Filter Tabs -->
+    <div class="flex items-center gap-1 p-1 bg-surface-1 border border-hairline rounded-lg">
+      <button
+        type="button"
+        data-sp-tab="songs"
+        class="sp-tab-btn flex-1 py-1 px-2 text-xs font-medium rounded-md transition cursor-pointer whitespace-nowrap bg-surface-2 text-ink"
+      >
+        Songs
+      </button>
+      <button
+        type="button"
+        data-sp-tab="playlists"
+        class="sp-tab-btn flex-1 py-1 px-2 text-xs font-medium rounded-md transition cursor-pointer whitespace-nowrap text-ink-subtle hover:text-ink"
+      >
+        Study Playlists
+      </button>
+      <button
+        type="button"
+        data-sp-tab="saved"
+        class="sp-tab-btn flex-1 py-1 px-2 text-xs font-medium rounded-md transition cursor-pointer whitespace-nowrap text-ink-subtle hover:text-ink"
+      >
+        My Queue
+      </button>
+    </div>
+
+    <!-- Track / Playlist Selector List -->
+    <div
+      id="spotify-items-list"
+      class="flex flex-col gap-1 max-h-[185px] overflow-y-auto pr-0.5"
+    >
+      {SEED_SPOTIFY_ITEMS.map((item) => (
+        <div
+          class="sp-item-row flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-surface-2/80 border border-transparent hover:border-hairline transition group"
+          data-id={item.id}
+          data-kind={item.kind}
+          data-spotify-id={item.spotifyId}
+        >
+          <button
+            type="button"
+            class="sp-select-btn flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+          >
+            <img
+              src={item.thumbnailUrl}
+              alt={item.title}
+              referrerpolicy="no-referrer"
+              loading="lazy"
+              class="w-8 h-8 rounded-md object-cover bg-surface-2 border border-hairline shrink-0"
+            />
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-medium text-ink truncate group-hover:text-primary-hover transition">
+                {item.title}
+              </p>
+              <p class="text-[11px] text-ink-subtle truncate">
+                {item.subtitle}
+              </p>
+            </div>
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+<script>
+  import {
+    SEED_SPOTIFY_ITEMS,
+    buildSpotifyEmbedUrl,
+    parseSpotifyInput,
+    type SpotifyItem,
+  } from '../utils/spotifyCatalog';
+
+  const CUSTOM_STORAGE_KEY = 'sa_spotify_custom_v1';
+  const ACTIVE_STORAGE_KEY = 'sa_spotify_active_v1';
+
+  const embedWrap = document.getElementById('spotify-embed-wrap');
+  const iframe = document.getElementById('spotify-embed-iframe') as HTMLIFrameElement | null;
+  const sizeToggleBtn = document.getElementById('spotify-size-toggle');
+  const searchForm = document.getElementById('spotify-search-form') as HTMLFormElement | null;
+  const searchInput = document.getElementById('spotify-input') as HTMLInputElement | null;
+  const statusMsg = document.getElementById('spotify-status-msg');
+  const itemsListEl = document.getElementById('spotify-items-list');
+  const tabBtns = document.querySelectorAll<HTMLButtonElement>('.sp-tab-btn');
+
+  // Preview audio player elements
+  const previewWrap = document.getElementById('spotify-preview-player');
+  const previewArt = document.getElementById('sp-preview-art') as HTMLImageElement | null;
+  const previewTitle = document.getElementById('sp-preview-title');
+  const previewArtist = document.getElementById('sp-preview-artist');
+  const previewPlayBtn = document.getElementById('sp-preview-play-btn');
+  const previewPlayIcon = document.getElementById('sp-preview-play-icon');
+  const previewOpenLink = document.getElementById('sp-preview-open-link') as HTMLAnchorElement | null;
+
+  let isExpanded = false;
+  let activeTab: 'songs' | 'playlists' | 'saved' | 'search' = 'songs';
+  let activeItemId = SEED_SPOTIFY_ITEMS[0].id;
+  let searchResults: SpotifyItem[] = [];
+  let previewAudio: HTMLAudioElement | null = null;
+
+  const PLAY_PATH = `<path d="M8 5v14l11-7z"/>`;
+  const PAUSE_PATH = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
+
+  function loadCustomItems(): SpotifyItem[] {
+    try {
+      const raw = localStorage.getItem(CUSTOM_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveCustomItems(items: SpotifyItem[]) {
+    try {
+      localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify(items));
+    } catch {}
+  }
+
+  function addCustomItem(item: SpotifyItem) {
+    const existing = loadCustomItems().filter((i) => i.id !== item.id && i.spotifyId !== item.spotifyId);
+    existing.unshift({ ...item, isCustom: true });
+    saveCustomItems(existing.slice(0, 40));
+  }
+
+  function removeCustomItem(id: string) {
+    const next = loadCustomItems().filter((i) => i.id !== id);
+    saveCustomItems(next);
+    renderList();
+  }
+
+  function stopPreviewAudio() {
+    if (previewAudio) {
+      previewAudio.pause();
+      previewAudio.currentTime = 0;
+    }
+  }
+
+  function playSpotifyItem(item: SpotifyItem) {
+    activeItemId = item.id;
+    try {
+      localStorage.setItem(ACTIVE_STORAGE_KEY, JSON.stringify(item));
+    } catch {}
+
+    if (item.kind === 'preview' && item.previewAudioUrl) {
+      embedWrap?.classList.add('hidden');
+      previewWrap?.classList.remove('hidden');
+      previewWrap?.classList.add('flex');
+
+      if (previewArt) previewArt.src = item.thumbnailUrl;
+      if (previewTitle) previewTitle.textContent = item.title;
+      if (previewArtist) previewArtist.textContent = item.subtitle;
+      if (previewOpenLink) {
+        previewOpenLink.href =
+          item.externalUrl ||
+          `https://open.spotify.com/search/${encodeURIComponent(`${item.title} ${item.subtitle}`)}`;
+      }
+
+      if (!previewAudio) {
+        previewAudio = new Audio();
+        previewAudio.loop = true;
+      }
+      previewAudio.src = item.previewAudioUrl;
+      previewAudio.volume = 0.8;
+      previewAudio.play().then(() => {
+        if (previewPlayIcon) previewPlayIcon.innerHTML = PAUSE_PATH;
+      }).catch(() => {
+        if (previewPlayIcon) previewPlayIcon.innerHTML = PLAY_PATH;
+      });
+    } else if (item.kind === 'track' || item.kind === 'playlist' || item.kind === 'album') {
+      stopPreviewAudio();
+      previewWrap?.classList.add('hidden');
+      previewWrap?.classList.remove('flex');
+      embedWrap?.classList.remove('hidden');
+
+      const nextUrl = buildSpotifyEmbedUrl(item.kind, item.spotifyId);
+      if (iframe && iframe.src !== nextUrl) {
+        iframe.src = nextUrl;
+      }
+    }
+
+    renderList();
+  }
+
+  previewPlayBtn?.addEventListener('click', () => {
+    if (!previewAudio) return;
+    if (previewAudio.paused) {
+      previewAudio.play().catch(() => {});
+      if (previewPlayIcon) previewPlayIcon.innerHTML = PAUSE_PATH;
+    } else {
+      previewAudio.pause();
+      if (previewPlayIcon) previewPlayIcon.innerHTML = PLAY_PATH;
+    }
+  });
+
+  sizeToggleBtn?.addEventListener('click', () => {
+    isExpanded = !isExpanded;
+    if (iframe) {
+      iframe.height = isExpanded ? '352' : '152';
+    }
+    if (sizeToggleBtn) {
+      sizeToggleBtn.textContent = isExpanded ? 'Compact' : 'Expand';
+    }
+  });
+
+  function setStatus(text: string, isError = false) {
+    if (!statusMsg) return;
+    if (!text) {
+      statusMsg.classList.add('hidden');
+      statusMsg.textContent = '';
+      return;
+    }
+    statusMsg.textContent = text;
+    statusMsg.className = `text-[11px] px-0.5 ${isError ? 'text-red-400' : 'text-ink-subtle'}`;
+  }
+
+  function getVisibleItems(): SpotifyItem[] {
+    if (activeTab === 'search') {
+      return searchResults;
+    }
+    const custom = loadCustomItems();
+    if (activeTab === 'saved') {
+      return custom;
+    }
+    if (activeTab === 'playlists') {
+      const customPlaylists = custom.filter((i) => i.kind === 'playlist' || i.kind === 'album');
+      const seedPlaylists = SEED_SPOTIFY_ITEMS.filter((i) => i.kind === 'playlist');
+      return [...customPlaylists, ...seedPlaylists];
+    }
+    // 'songs'
+    const customSongs = custom.filter((i) => i.kind === 'track' || i.kind === 'preview');
+    const seedSongs = SEED_SPOTIFY_ITEMS.filter((i) => i.kind === 'track');
+    return [...customSongs, ...seedSongs];
+  }
+
+  function updateTabButtons() {
+    tabBtns.forEach((btn) => {
+      const tab = btn.getAttribute('data-sp-tab');
+      const isSelected = tab === activeTab;
+      if (isSelected) {
+        btn.classList.add('bg-surface-2', 'text-ink');
+        btn.classList.remove('text-ink-subtle');
+      } else {
+        btn.classList.remove('bg-surface-2', 'text-ink');
+        btn.classList.add('text-ink-subtle');
+      }
+    });
+  }
+
+  function renderList() {
+    if (!itemsListEl) return;
+    const items = getVisibleItems();
+    itemsListEl.innerHTML = '';
+
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'py-6 text-center text-xs text-ink-subtle';
+      empty.textContent =
+        activeTab === 'saved'
+          ? 'No saved songs yet. Search a song or paste any Spotify link above.'
+          : 'No matching tracks found.';
+      itemsListEl.appendChild(empty);
+      return;
+    }
+
+    for (const item of items) {
+      const isCurrent = item.id === activeItemId;
+      const row = document.createElement('div');
+      row.className = `sp-item-row flex items-center justify-between gap-2 p-1.5 rounded-lg transition group border ${
+        isCurrent
+          ? 'bg-primary/15 border-primary/40'
+          : 'hover:bg-surface-2/80 border-transparent hover:border-hairline'
+      }`;
+
+      const selectBtn = document.createElement('button');
+      selectBtn.type = 'button';
+      selectBtn.className = 'flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer';
+
+      const img = document.createElement('img');
+      img.src = item.thumbnailUrl;
+      img.alt = item.title;
+      img.referrerPolicy = 'no-referrer';
+      img.loading = 'lazy';
+      img.className = 'w-8 h-8 rounded-md object-cover bg-surface-2 border border-hairline shrink-0';
+      img.onerror = () => {
+        img.src = 'https://i.scdn.co/image/ab67706c0000da84ca717228b1f23c1b0a170c2f';
+      };
+
+      const textWrap = document.createElement('div');
+      textWrap.className = 'min-w-0 flex-1';
+
+      const titleEl = document.createElement('p');
+      titleEl.className = `text-xs font-medium truncate transition ${
+        isCurrent ? 'text-primary-hover font-semibold' : 'text-ink group-hover:text-primary-hover'
+      }`;
+      titleEl.textContent = item.title;
+
+      const subEl = document.createElement('p');
+      subEl.className = 'text-[11px] text-ink-subtle truncate';
+      subEl.textContent = `${item.subtitle}${item.kind === 'preview' ? ' · Instant Stream' : ''}`;
+
+      textWrap.appendChild(titleEl);
+      textWrap.appendChild(subEl);
+      selectBtn.appendChild(img);
+      selectBtn.appendChild(textWrap);
+
+      selectBtn.addEventListener('click', () => {
+        if (activeTab === 'search') {
+          addCustomItem(item);
+        }
+        playSpotifyItem(item);
+      });
+
+      row.appendChild(selectBtn);
+
+      if (item.isCustom && activeTab !== 'search') {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className =
+          'text-ink-tertiary hover:text-red-400 p-1 rounded opacity-0 group-hover:opacity-100 transition cursor-pointer shrink-0';
+        delBtn.title = 'Remove from queue';
+        delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeCustomItem(item.id);
+        });
+        row.appendChild(delBtn);
+      } else if (activeTab === 'search') {
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className =
+          'text-[11px] font-medium text-primary-hover hover:text-white bg-primary/15 hover:bg-primary px-2 py-1 rounded transition cursor-pointer shrink-0';
+        saveBtn.textContent = 'Play & Save';
+        saveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          addCustomItem(item);
+          playSpotifyItem(item);
+          setStatus(`Saved "${item.title}" to My Queue`);
+        });
+        row.appendChild(saveBtn);
+      }
+
+      itemsListEl.appendChild(row);
+    }
+  }
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-sp-tab') as 'songs' | 'playlists' | 'saved';
+      if (!tab) return;
+      activeTab = tab;
+      setStatus('');
+      updateTabButtons();
+      renderList();
+    });
+  });
+
+  searchForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const raw = searchInput?.value.trim() || '';
+    if (!raw) return;
+
+    const parsed = parseSpotifyInput(raw);
+    if (parsed) {
+      setStatus('Adding Spotify link…');
+      try {
+        const res = await fetch('/api/spotify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: raw }),
+        });
+        const data = await res.json();
+        if (res.ok && data?.item) {
+          addCustomItem(data.item);
+          if (searchInput) searchInput.value = '';
+          activeTab = data.item.kind === 'playlist' || data.item.kind === 'album' ? 'playlists' : 'songs';
+          updateTabButtons();
+          playSpotifyItem(data.item);
+          setStatus(`Playing "${data.item.title}"`);
+          return;
+        }
+      } catch {}
+
+      // Client fallback if offline
+      const fallbackItem: SpotifyItem = {
+        id: `sp-custom-${parsed.kind}-${parsed.spotifyId}`,
+        spotifyId: parsed.spotifyId,
+        kind: parsed.kind,
+        title: `Spotify ${parsed.kind.charAt(0).toUpperCase() + parsed.kind.slice(1)}`,
+        subtitle: 'Custom Spotify Link',
+        thumbnailUrl: 'https://i.scdn.co/image/ab67706c0000da84ca717228b1f23c1b0a170c2f',
+        isCustom: true,
+      };
+      addCustomItem(fallbackItem);
+      if (searchInput) searchInput.value = '';
+      playSpotifyItem(fallbackItem);
+      setStatus('Added Spotify link');
+      return;
+    }
+
+    // Otherwise search songs by name
+    setStatus(`Searching "${raw}"…`);
+    try {
+      const res = await fetch(`/api/spotify?q=${encodeURIComponent(raw)}`);
+      const data = await res.json();
+      searchResults = Array.isArray(data?.items) ? data.items : [];
+      activeTab = 'search';
+      updateTabButtons();
+      renderList();
+      setStatus(
+        searchResults.length > 0
+          ? `Found ${searchResults.length} tracks — click any song to play & save`
+          : `No tracks found for "${raw}". Try pasting a Spotify link!`
+      );
+    } catch {
+      setStatus('Could not search right now. Paste a Spotify link directly!', true);
+    }
+  });
+
+  // Restore last active item if present
+  try {
+    const savedActive = localStorage.getItem(ACTIVE_STORAGE_KEY);
+    if (savedActive) {
+      const parsed = JSON.parse(savedActive) as SpotifyItem;
+      if (parsed && parsed.id && parsed.spotifyId) {
+        playSpotifyItem(parsed);
+      }
+    }
+  } catch {}
+
+  renderList();
+</script>

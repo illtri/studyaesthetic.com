@@ -228,6 +228,17 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 <script>
   import { recordVideoView, syncVideosFromServer } from '../utils/VideoDatabase';
   import { extractYouTubeId } from '../utils/mediaCatalog';
+  import { canAccessSpace, isAuthenticatedProfile } from '../utils/authHelper';
+
+  function isUserSignedIn(): boolean {
+    try {
+      const raw = localStorage.getItem("sa_user_profile_v1");
+      if (!raw) return false;
+      return isAuthenticatedProfile(JSON.parse(raw));
+    } catch {
+      return false;
+    }
+  }
 
   const drawer   = document.getElementById("spaces-drawer");
   const closeBtn = document.getElementById("close-drawer");
@@ -242,6 +253,21 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
   mainTabs.forEach((tab, idx) => {
     tab?.addEventListener("click", () => {
+      if (idx > 0 && !isUserSignedIn()) {
+        drawer?.classList.add("-translate-x-full");
+        document.dispatchEvent(
+          new CustomEvent("open-auth-modal", {
+            detail: {
+              reason:
+                idx === 1
+                  ? "Sign in to unlock Static Backgrounds."
+                  : "Sign in to upload custom videos, images, and YouTube links.",
+            },
+          })
+        );
+        return;
+      }
+
       mainTabs.forEach((t, i) => {
         t?.classList.toggle("border-primary", i === idx);
         t?.classList.toggle("text-ink",       i === idx);
@@ -263,6 +289,27 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
   let activeSpaceCat = "All Spaces";
   let searchQuery    = "";
+
+  function syncSpaceLocks() {
+    const signedIn = isUserSignedIn();
+    spaceCards.forEach(card => {
+      const id = card.getAttribute("data-id") || "";
+      const contentType = card.getAttribute("data-content-type") || "direct_video";
+      const allowed = canAccessSpace(id, contentType, signedIn);
+      let badge = card.querySelector<HTMLElement>(".space-lock-badge");
+      if (!allowed) {
+        if (!badge) {
+          badge = document.createElement("div");
+          badge.className =
+            "space-lock-badge absolute top-2 right-9 z-10 px-2 py-0.5 rounded bg-black/75 border border-white/15 text-[10px] font-medium text-white flex items-center gap-1 pointer-events-none";
+          badge.innerHTML = `<svg class="w-2.5 h-2.5 text-primary-hover" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>Sign in</span>`;
+          card.appendChild(badge);
+        }
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
 
   function filterSpaces() {
     spaceCards.forEach(card => {
@@ -307,6 +354,19 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       const contentUrl  = card.getAttribute("data-content-url") || "";
       const contentType = card.getAttribute("data-content-type") || "direct_video";
       const title       = card.getAttribute("data-title") || "";
+
+      if (!canAccessSpace(id, contentType, isUserSignedIn())) {
+        drawer?.classList.add("-translate-x-full");
+        document.dispatchEvent(
+          new CustomEvent("open-auth-modal", {
+            detail: {
+              reason: `Sign in to unlock "${title}", YouTube Live streams, and all 20+ study spaces.`,
+            },
+          })
+        );
+        return;
+      }
+
       let presets: Record<string, number> = {};
       try { presets = JSON.parse(card.getAttribute("data-presets") || "{}"); } catch {}
 
@@ -325,6 +385,11 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       card.classList.add("border-primary/50");
     });
   });
+
+  document.addEventListener("auth-state-changed", () => {
+    syncSpaceLocks();
+  });
+  syncSpaceLocks();
 
   // ── Favorites (spaces) ───────────────────────────────────────────
   function getFavs(): string[] {
@@ -347,6 +412,15 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     btn.textContent = isFav ? "⭐" : "☆";
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (!isUserSignedIn()) {
+        drawer?.classList.add("-translate-x-full");
+        document.dispatchEvent(
+          new CustomEvent("open-auth-modal", {
+            detail: { reason: "Sign in to save favorite spaces to your account." },
+          })
+        );
+        return;
+      }
       toggleFav(id);
       btn.textContent = getFavs().includes(id) ? "⭐" : "☆";
     });
@@ -374,6 +448,15 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
   bgCards.forEach(card => {
     card.addEventListener("click", () => {
+      if (!isUserSignedIn()) {
+        drawer?.classList.add("-translate-x-full");
+        document.dispatchEvent(
+          new CustomEvent("open-auth-modal", {
+            detail: { reason: "Sign in to unlock Static Backgrounds." },
+          })
+        );
+        return;
+      }
       const url   = card.getAttribute("data-bg-url") || "";
       const title = card.getAttribute("data-bg-title") || "";
       const id    = card.getAttribute("data-bg-id") || "";

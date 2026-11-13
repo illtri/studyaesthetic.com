@@ -31,13 +31,26 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
 
   <!-- Body -->
   <div class="widget-body px-4 pb-4 pt-3.5 flex flex-col">
+    <!-- Guest Lock Notice Banner (shown only when signed out) -->
+    <button
+      id="soundboard-guest-banner"
+      type="button"
+      class="hidden mb-2.5 w-full px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/25 text-[10px] font-medium text-ink-muted flex items-center justify-between transition cursor-pointer"
+    >
+      <span class="flex items-center gap-1.5">
+        <span>🔒</span>
+        <span>10 of 12 tracks locked in Guest Mode</span>
+      </span>
+      <span class="text-primary-hover font-semibold underline">Unlock All</span>
+    </button>
+
     <!-- Quick Presets -->
     <div class="grid grid-cols-3 gap-1.5 mb-2.5">
-      <button id="preset-study" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Study</button>
-      <button id="preset-rain"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Rainy</button>
-      <button id="preset-cafe"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Cafe</button>
-      <button id="preset-piano" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Piano</button>
-      <button id="preset-ocean" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Ocean</button>
+      <button id="preset-study" data-preset-label="Study" class="preset-btn text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Study</button>
+      <button id="preset-rain"  data-preset-label="Rainy" class="preset-btn text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Rainy</button>
+      <button id="preset-cafe"  data-preset-label="Cafe"  class="preset-btn text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Cafe</button>
+      <button id="preset-piano" data-preset-label="Piano" class="preset-btn text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Piano</button>
+      <button id="preset-ocean" data-preset-label="Ocean" class="preset-btn text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Ocean</button>
       <button id="preset-reset" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Clear</button>
     </div>
 
@@ -58,18 +71,18 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
     <div id="sound-sliders-list" class="space-y-2.5 mb-3 max-h-[268px] overflow-y-auto pr-1">
       {ambientSounds.map(sound => (
         <div
-          class="sound-row flex items-center gap-3 bg-surface-2/30 border border-hairline/50 p-2 rounded-lg"
+          class="sound-row flex items-center gap-3 bg-surface-2/30 border border-hairline/50 p-2 rounded-lg transition"
           data-sound-id={sound.id}
           data-sound-category={sound.category}
         >
           <audio id={`audio-${sound.id}`} src={sound.url} loop preload="none"></audio>
           <button
             type="button"
-            class="sound-toggle-btn w-8 h-8 rounded-md bg-surface-2 hover:bg-surface-3 flex items-center justify-center text-sm transition cursor-pointer shrink-0"
+            class="sound-toggle-btn relative w-8 h-8 rounded-md bg-surface-2 hover:bg-surface-3 flex items-center justify-center text-sm transition cursor-pointer shrink-0"
             data-sound-id={sound.id}
             aria-label={`Toggle ${sound.name}`}
           >
-            {sound.icon}
+            <span>{sound.icon}</span>
           </button>
           <div class="flex-1 flex flex-col min-w-0">
             <div class="flex justify-between items-center mb-1 gap-2">
@@ -114,6 +127,26 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
 </style>
 
 <script>
+  import { canAccessSound, isAuthenticatedProfile } from '../utils/authHelper';
+
+  function isUserSignedIn(): boolean {
+    try {
+      const raw = localStorage.getItem("sa_user_profile_v1");
+      if (!raw) return false;
+      return isAuthenticatedProfile(JSON.parse(raw));
+    } catch {
+      return false;
+    }
+  }
+
+  function promptSoundSignIn() {
+    document.dispatchEvent(
+      new CustomEvent("open-auth-modal", {
+        detail: { reason: "Sign in to unlock all 12 music & ambient soundtracks and custom presets." },
+      })
+    );
+  }
+
   const widget = document.getElementById("soundboard-widget");
   const minimizeBtn = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
@@ -121,6 +154,8 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
     widget?.classList.toggle("is-minimized");
   });
 
+  const guestBanner  = document.getElementById("soundboard-guest-banner");
+  const presetBtns   = document.querySelectorAll<HTMLButtonElement>(".preset-btn");
   const soundSliders = document.querySelectorAll(".sound-slider") as NodeListOf<HTMLInputElement>;
   const toggleBtns   = document.querySelectorAll(".sound-toggle-btn") as NodeListOf<HTMLButtonElement>;
   const catTabs      = document.querySelectorAll<HTMLButtonElement>(".sound-cat-tab");
@@ -142,6 +177,61 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
     }
   });
 
+  guestBanner?.addEventListener("click", () => {
+    promptSoundSignIn();
+  });
+
+  function syncSoundLocks() {
+    const signedIn = isUserSignedIn();
+    if (guestBanner) {
+      guestBanner.classList.toggle("hidden", signedIn);
+    }
+    presetBtns.forEach(btn => {
+      const baseLabel = btn.getAttribute("data-preset-label") || btn.textContent || "";
+      btn.textContent = signedIn ? baseLabel : `🔒 ${baseLabel}`;
+    });
+
+    soundRows.forEach(row => {
+      const id = row.getAttribute("data-sound-id") || "";
+      const allowed = canAccessSound(id, signedIn);
+      const label = row.querySelector<HTMLElement>(".sound-value-label");
+      const slider = row.querySelector<HTMLInputElement>(".sound-slider");
+      if (!allowed) {
+        row.classList.add("opacity-65", "cursor-pointer");
+        row.setAttribute("data-locked", "true");
+        if (label) {
+          label.textContent = "🔒 Locked";
+          label.className = "sound-value-label text-[9px] font-semibold text-amber-300/90 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded shrink-0";
+        }
+        if (slider) {
+          slider.value = "0";
+        }
+        if (audioStates[id]?.isPlaying) {
+          updateSound(id, 0);
+        }
+      } else {
+        row.classList.remove("opacity-65", "cursor-pointer");
+        row.removeAttribute("data-locked");
+        const state = audioStates[id];
+        if (label) {
+          label.className = "sound-value-label text-[10px] font-mono text-ink-subtle shrink-0";
+          label.textContent = `${Math.round((state?.volume || 0) * 100)}%`;
+        }
+      }
+    });
+  }
+
+  soundRows.forEach(row => {
+    row.addEventListener("click", (e) => {
+      const id = row.getAttribute("data-sound-id") || "";
+      if (!canAccessSound(id, isUserSignedIn())) {
+        e.preventDefault();
+        e.stopPropagation();
+        promptSoundSignIn();
+      }
+    });
+  });
+
   catTabs.forEach(tab => {
     tab.addEventListener("click", () => {
       catTabs.forEach(t => {
@@ -161,14 +251,24 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
   soundSliders.forEach(slider => {
     slider.addEventListener("input", (e) => {
       const id = slider.getAttribute("data-sound-id") || "";
+      if (!canAccessSound(id, isUserSignedIn())) {
+        slider.value = "0";
+        promptSoundSignIn();
+        return;
+      }
       const val = parseInt((e.target as HTMLInputElement).value);
       updateSound(id, val);
     });
   });
 
   toggleBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
       const id = btn.getAttribute("data-sound-id") || "";
+      if (!canAccessSound(id, isUserSignedIn())) {
+        e.stopPropagation();
+        promptSoundSignIn();
+        return;
+      }
       const state = audioStates[id];
       if (state) updateSound(id, state.isPlaying ? 0 : 50);
     });
@@ -177,11 +277,15 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
   function updateSound(soundId: string, volume: number) {
     const state = audioStates[soundId];
     if (!state) return;
+    if (!canAccessSound(soundId, isUserSignedIn()) && volume > 0) return;
+
     state.volume = volume / 100;
     const slider = widget?.querySelector(`.sound-slider[data-sound-id="${soundId}"]`) as HTMLInputElement;
     if (slider) slider.value = volume.toString();
     const label = widget?.querySelector(`[data-sound-id="${soundId}"] .sound-value-label`);
-    if (label) label.textContent = `${volume}%`;
+    if (label && canAccessSound(soundId, isUserSignedIn())) {
+      label.textContent = `${volume}%`;
+    }
     const btn = widget?.querySelector(`.sound-toggle-btn[data-sound-id="${soundId}"]`) as HTMLButtonElement;
     if (volume > 0) {
       state.isPlaying = true;
@@ -199,6 +303,12 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
   }
 
   function stopAllAndApply(presets: Record<string, number>) {
+    const signedIn = isUserSignedIn();
+    const hasLocked = Object.keys(presets).some((id) => !canAccessSound(id, signedIn));
+    if (hasLocked) {
+      promptSoundSignIn();
+      return;
+    }
     Object.keys(audioStates).forEach(id => updateSound(id, 0));
     Object.keys(presets).forEach(id => updateSound(id, presets[id]));
   }
@@ -231,6 +341,11 @@ const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const
 
   document.addEventListener("change-space", (e: any) => {
     const presets = e.detail?.presets;
-    if (presets) stopAllAndApply(presets);
+    if (presets && isUserSignedIn()) stopAllAndApply(presets);
   });
+
+  document.addEventListener("auth-state-changed", () => {
+    syncSoundLocks();
+  });
+  syncSoundLocks();
 </script>

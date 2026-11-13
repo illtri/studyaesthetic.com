@@ -219,17 +219,39 @@ body {
 /* ─── Dock sidebar ──────────────────────────────────────────── */
 #app-dock-container {
   position: fixed;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 16px;
+  top: 64px;
+  bottom: 12px;
+  transform: none;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s var(--ease-spring);
+}
+
+#app-dock-container .dock-inner {
+  pointer-events: auto;
+  max-height: calc(100vh - 76px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  transition: padding 0.22s ease, gap 0.22s ease;
+}
+
+#app-dock-container .dock-inner::-webkit-scrollbar {
+  display: none;
+}
+
+#app-dock-container .dock-inner.is-collapsed .dock-collapsible {
+  display: none !important;
 }
 
 #app-dock-container.dock-hidden {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%) translateX(-8px);
+  transform: translateX(-8px);
 }
 
 /* Dock icon hover — magnetic expansion effect */
@@ -239,7 +261,7 @@ body {
 }
 .dock-btn:hover,
 .dock-widget-btn:hover {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 .dock-btn:active,
 .dock-widget-btn:active {
@@ -247,11 +269,12 @@ body {
 }
 
 /* Dock icon inner ring hover glow */
-.dock-btn .w-9,
+.dock-btn .btn-ring,
 .dock-widget-btn .btn-ring {
   transition: box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
-.dock-widget-btn:hover .btn-ring {
+.dock-widget-btn:hover .btn-ring,
+.dock-btn:hover .btn-ring {
   box-shadow: 0 0 12px rgba(94, 106, 210, 0.25);
 }
 
@@ -260,8 +283,9 @@ body {
   #app-dock-container {
     left: 50%;
     top: auto;
-    bottom: 16px;
+    bottom: 12px;
     transform: translateX(-50%);
+    max-width: calc(100vw - 24px);
   }
 
   #app-dock-container.dock-hidden {
@@ -270,6 +294,10 @@ body {
 
   #app-dock-container .dock-inner {
     flex-direction: row !important;
+    max-height: none;
+    max-width: calc(100vw - 24px);
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .widget-island {

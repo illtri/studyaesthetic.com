@@ -1,48 +1,93 @@
 ---
-// e:/ARUNAV WORKS/studyaesthetic.com/src/components/LoginModal.astro
+// src/components/LoginModal.astro
 ---
 
 <div
   id="auth-modal"
-  class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300"
+  class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300"
   role="dialog"
   aria-modal="true"
   aria-labelledby="auth-modal-title"
 >
-  <!-- Card Container -->
-  <div class="glass w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-hairline/80 translate-y-4 transition-transform duration-300 ease-out" id="auth-modal-card">
-    
+  <!-- ═══════════════════════════════════════════════════════════
+       VIEW 1: MAIN SIGN IN / CREATE ACCOUNT CARD
+       ═══════════════════════════════════════════════════════════ -->
+  <div
+    class="glass w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-hairline/80 translate-y-4 transition-transform duration-300 ease-out"
+    id="auth-modal-card"
+  >
     <!-- Tab Headers -->
     <div class="flex border-b border-hairline">
-      <button id="tab-login" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink border-b-2 border-primary bg-white/[0.02]" aria-pressed="true">
+      <button
+        type="button"
+        id="tab-login"
+        class="flex-1 py-4 text-xs font-semibold tracking-wide text-ink border-b-2 border-primary bg-white/[0.02] cursor-pointer transition"
+        aria-pressed="true"
+      >
         Sign In
       </button>
-      <button id="tab-register" class="flex-1 py-4 text-xs font-bold uppercase tracking-wider text-ink-subtle hover:text-ink border-b-2 border-transparent transition" aria-pressed="false">
+      <button
+        type="button"
+        id="tab-register"
+        class="flex-1 py-4 text-xs font-semibold tracking-wide text-ink-subtle hover:text-ink border-b-2 border-transparent cursor-pointer transition"
+        aria-pressed="false"
+      >
         Create Account
       </button>
     </div>
 
     <!-- Inner Content -->
-    <div class="p-6 flex flex-col gap-5">
+    <div class="p-6 flex flex-col gap-4">
       <div class="text-center">
-        <h2 id="auth-modal-title" class="font-sans font-bold text-lg tracking-tight text-ink">Welcome to StudyAesthetic</h2>
-        <p id="auth-modal-desc" class="text-xs text-ink-subtle mt-1 font-sans">Sync your layouts, statistics, and preferences across devices.</p>
+        <h2 id="auth-modal-title" class="font-sans font-bold text-lg tracking-tight text-ink">
+          Welcome to StudyAesthetic
+        </h2>
+        <p id="auth-modal-desc" class="text-xs text-ink-subtle mt-1 font-sans">
+          Sync your layouts, statistics, and preferences across devices.
+        </p>
       </div>
 
-      <!-- Error / Alert Message Banner -->
-      <div id="auth-error-banner" class="hidden px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans">
+      <!-- Feature Gate / Lock Reason Banner -->
+      <div
+        id="auth-gate-banner"
+        class="hidden px-3.5 py-2.5 bg-primary/15 border border-primary/35 rounded-lg text-xs text-ink font-sans flex items-center gap-2"
+      >
+        <svg class="w-4 h-4 text-primary-hover shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <span id="auth-gate-banner-text">Sign in to unlock all features.</span>
+      </div>
+
+      <!-- Error / Info Banner -->
+      <div
+        id="auth-error-banner"
+        class="hidden px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans"
+      >
         Invalid credentials. Please try again.
       </div>
 
       <!-- Main Form -->
-      <form id="auth-form" class="flex flex-col gap-4" onsubmit="return false;">
-        <!-- Username/Email Field -->
+      <form id="auth-form" class="flex flex-col gap-3.5" novalidate>
+        <!-- Display Name Field (visible in Create Account mode) -->
+        <div id="auth-name-wrap" class="hidden flex-col gap-1.5">
+          <label for="auth-name" class="text-xs font-medium text-ink-subtle">Display Name</label>
+          <input
+            type="text"
+            id="auth-name"
+            placeholder="Atul Kumar"
+            autocomplete="name"
+            class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
+          />
+        </div>
+
+        <!-- Email Field -->
         <div class="flex flex-col gap-1.5">
-          <label for="auth-email" class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Email Address</label>
+          <label for="auth-email" class="text-xs font-medium text-ink-subtle">Email Address</label>
           <input
             type="email"
             id="auth-email"
             placeholder="name@example.com"
+            autocomplete="email"
             required
             class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
           />
@@ -51,13 +96,20 @@
         <!-- Password Field -->
         <div class="flex flex-col gap-1.5">
           <div class="flex items-center justify-between">
-            <label for="auth-password" class="text-[10px] font-bold uppercase tracking-wider text-ink-subtle">Password</label>
-            <a href="#" class="text-[10px] text-primary-hover hover:underline" id="forgot-password-link">Forgot password?</a>
+            <label for="auth-password" class="text-xs font-medium text-ink-subtle">Password</label>
+            <button
+              type="button"
+              class="text-[11px] text-primary-hover hover:underline cursor-pointer"
+              id="forgot-password-link"
+            >
+              Forgot password?
+            </button>
           </div>
           <input
             type="password"
             id="auth-password"
             placeholder="••••••••"
+            autocomplete="current-password"
             required
             class="bg-surface-1 border border-hairline focus:border-primary focus:outline-none rounded-lg px-3.5 py-2.5 text-sm text-ink placeholder-ink-tertiary transition font-sans w-full"
           />
@@ -67,10 +119,9 @@
         <button
           type="submit"
           id="auth-submit-btn"
-          class="bg-primary hover:bg-primary-hover text-white text-xs font-semibold py-3 rounded-lg mt-2 transition cursor-pointer select-none flex items-center justify-center gap-2 border border-primary-focus/40 shadow-lg shadow-primary/20"
+          class="bg-primary hover:bg-primary-hover text-white text-xs font-semibold py-3 rounded-lg mt-1 transition cursor-pointer select-none flex items-center justify-center gap-2 border border-primary-focus/40 shadow-lg shadow-primary/20"
         >
           <span id="submit-btn-text">Sign In</span>
-          <!-- Loading Spinner -->
           <svg id="submit-btn-spinner" class="animate-spin h-3.5 w-3.5 text-white hidden" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -79,173 +130,634 @@
       </form>
 
       <!-- Divider -->
-      <div class="flex items-center gap-3 shrink-0 my-1">
+      <div class="flex items-center gap-3 shrink-0 my-0.5">
         <div class="h-px bg-hairline flex-1"></div>
-        <span class="text-[9px] font-bold uppercase tracking-wider text-ink-tertiary">or continue with</span>
+        <span class="text-[11px] font-medium text-ink-tertiary">or continue with</span>
         <div class="h-px bg-hairline flex-1"></div>
       </div>
 
-      <!-- Social / OAuth Options -->
-      <div class="grid grid-cols-2 gap-2">
-        <button id="auth-google-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
-          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+      <!-- Social / Mail Options: Google & Apple Mail -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          id="auth-google-btn"
+          class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/80 border border-hairline rounded-lg text-xs font-medium text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none whitespace-nowrap"
+        >
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
           </svg>
-          Google
+          <span>Google</span>
         </button>
-        <button id="auth-github-btn" class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/60 border border-hairline rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none">
-          <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+
+        <button
+          type="button"
+          id="auth-apple-btn"
+          class="flex items-center justify-center gap-2 py-2.5 px-3 bg-surface-2/80 border border-hairline rounded-lg text-xs font-medium text-ink-muted hover:text-ink hover:bg-surface-3 transition cursor-pointer select-none whitespace-nowrap"
+        >
+          <svg class="w-4 h-4 shrink-0 text-ink" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
           </svg>
-          GitHub
+          <span>Apple Mail</span>
         </button>
       </div>
 
       <!-- Demo Account Quick Button -->
-      <button id="auth-demo-btn" class="w-full py-3 px-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 text-xs font-semibold text-primary-hover hover:text-white transition cursor-pointer select-none">
-        🚀 Sign In with Demo Account (Instant)
+      <button
+        type="button"
+        id="auth-demo-btn"
+        class="w-full py-2.5 px-4 bg-primary/10 border border-primary/25 rounded-lg hover:bg-primary/20 text-xs font-semibold text-primary-hover hover:text-white transition cursor-pointer select-none"
+      >
+        Sign In with Demo Account (Instant)
       </button>
 
       <!-- Footer Close Link -->
-      <button id="auth-close-link" class="text-[10px] text-ink-subtle hover:text-ink mt-1 transition cursor-pointer select-none">
-        Go Back to Study Space
+      <button
+        type="button"
+        id="auth-close-link"
+        class="text-xs text-ink-subtle hover:text-ink mt-0.5 transition cursor-pointer select-none"
+      >
+        Continue in Guest Mode (Limited Features)
       </button>
     </div>
+  </div>
 
+  <!-- ═══════════════════════════════════════════════════════════
+       VIEW 2: GOOGLE / APPLE MAIL "CHOOSE AN ACCOUNT" DIALOG
+       Matches the authentic dark "Choose an account" screen
+       ═══════════════════════════════════════════════════════════ -->
+  <div
+    id="auth-chooser-card"
+    class="hidden w-full max-w-[780px] flex-col">
+    <div class="w-full bg-[#0e0e0f] border border-white/10 rounded-[28px] overflow-hidden shadow-2xl">
+      <!-- Top Provider Bar -->
+      <div class="flex items-center justify-between px-7 py-4 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <!-- Google Icon -->
+          <svg id="chooser-icon-google" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+          </svg>
+          <!-- Apple Icon -->
+          <svg id="chooser-icon-apple" class="hidden w-5 h-5 shrink-0 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+          </svg>
+          <span id="chooser-header-label" class="text-sm font-normal text-[#e3e3e3] font-sans">
+            Sign in with Google
+          </span>
+        </div>
+        <button
+          type="button"
+          id="chooser-back-btn"
+          class="text-xs text-[#9aa0a6] hover:text-white transition cursor-pointer"
+        >
+          ← Back
+        </button>
+      </div>
+
+      <!-- Two-Column Main Body -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 px-8 py-10 md:px-10 md:py-12">
+        <!-- Left Column: Title & Brand -->
+        <div class="flex flex-col justify-between">
+          <div>
+            <h3 id="chooser-main-heading" class="text-[32px] leading-tight font-normal text-[#e3e3e3] tracking-tight font-sans">
+              Choose an account
+            </h3>
+            <p class="mt-3 text-base text-[#e3e3e3] font-sans">
+              to continue to <span class="text-[#8ab4f8] font-medium">studyaesthetic.com</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Right Column: Account List & "Use another account" -->
+        <div class="flex flex-col">
+          <div id="chooser-accounts-list" class="flex flex-col divide-y divide-white/15 border-b border-white/15">
+            <!-- Populated dynamically by script -->
+          </div>
+
+          <!-- "Use another account" button row -->
+          <button
+            type="button"
+            id="chooser-use-another-btn"
+            class="flex items-center gap-3.5 py-3.5 px-2 border-b border-white/15 hover:bg-white/[0.04] transition cursor-pointer text-left w-full"
+          >
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[#e3e3e3] shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <span id="chooser-use-another-label" class="text-sm font-medium text-[#e3e3e3]">
+              Use another account
+            </span>
+          </button>
+
+          <!-- Inline Custom Account Form (shown when "Use another account" is clicked) -->
+          <form id="chooser-custom-form" class="hidden flex-col gap-3 pt-4 pb-2" novalidate>
+            <div class="flex flex-col gap-1">
+              <label for="chooser-custom-name" class="text-xs text-[#9aa0a6]">Full Name</label>
+              <input
+                id="chooser-custom-name"
+                type="text"
+                placeholder="Your Name"
+                class="bg-[#1b1b1f] border border-white/20 focus:border-[#8ab4f8] focus:outline-none rounded-lg px-3 py-2 text-sm text-white placeholder-[#9aa0a6]"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label id="chooser-custom-email-label" for="chooser-custom-email" class="text-xs text-[#9aa0a6]">
+                Google Email
+              </label>
+              <input
+                id="chooser-custom-email"
+                type="email"
+                placeholder="you@gmail.com"
+                required
+                class="bg-[#1b1b1f] border border-white/20 focus:border-[#8ab4f8] focus:outline-none rounded-lg px-3 py-2 text-sm text-white placeholder-[#9aa0a6]"
+              />
+            </div>
+            <p id="chooser-custom-error" class="hidden text-xs text-red-400"></p>
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                id="chooser-custom-cancel"
+                class="px-3.5 py-1.5 rounded-full text-xs font-medium text-[#8ab4f8] hover:bg-[#8ab4f8]/10 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-1.5 rounded-full text-xs font-medium bg-[#8ab4f8] text-[#0e0e0f] hover:bg-[#aecbfa] transition cursor-pointer"
+              >
+                Continue
+              </button>
+            </div>
+          </form>
+
+          <!-- Privacy / Terms Footer -->
+          <p class="mt-6 text-xs leading-relaxed text-[#9aa0a6]">
+            Before using this app, you can review studyaesthetic.com’s
+            <span class="text-[#8ab4f8]">Privacy Policy</span> and
+            <span class="text-[#8ab4f8]">Terms of Service</span>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar outside card (matches screenshot footer) -->
+    <div class="flex items-center justify-between px-3 pt-4 text-xs text-[#9aa0a6]">
+      <span>English (United States)</span>
+      <div class="flex items-center gap-6">
+        <button type="button" id="chooser-cancel-footer" class="hover:text-white cursor-pointer">Cancel</button>
+        <span>Privacy</span>
+        <span>Terms</span>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-  // Auth system states and visual handlers
-  const authModal     = document.getElementById("auth-modal");
-  const authModalCard = document.getElementById("auth-modal-card");
-  const closeLink     = document.getElementById("auth-close-link");
-  const demoBtn       = document.getElementById("auth-demo-btn");
-  const googleBtn     = document.getElementById("auth-google-btn");
-  const githubBtn     = document.getElementById("auth-github-btn");
-  const form          = document.getElementById("auth-form") as HTMLFormElement;
-  const submitBtn     = document.getElementById("auth-submit-btn");
-  const submitText    = document.getElementById("submit-btn-text");
-  const spinner       = document.getElementById("submit-btn-spinner");
-  const errorBanner   = document.getElementById("auth-error-banner");
+  import {
+    buildSignedInProfile,
+    createAvatarDataUri,
+    deriveDisplayName,
+    getDefaultChooserAccounts,
+    type ChooserAccount,
+    type SignedInProvider,
+  } from '../utils/authHelper';
+  import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-  const tabLogin      = document.getElementById("tab-login") as HTMLButtonElement;
-  const tabRegister   = document.getElementById("tab-register") as HTMLButtonElement;
-  const authTitle     = document.getElementById("auth-modal-title");
-  const authDesc      = document.getElementById("auth-modal-desc");
+  const ACCOUNTS_STORAGE_KEY = 'sa_registered_accounts_v1';
+  const CHOOSER_ACCOUNTS_KEY = 'sa_chooser_accounts_v1';
 
-  let isRegisterTab   = false;
+  const authModal = document.getElementById('auth-modal');
+  const authModalCard = document.getElementById('auth-modal-card');
+  const authChooserCard = document.getElementById('auth-chooser-card');
+
+  const closeLink = document.getElementById('auth-close-link');
+  const demoBtn = document.getElementById('auth-demo-btn');
+  const googleBtn = document.getElementById('auth-google-btn');
+  const appleBtn = document.getElementById('auth-apple-btn');
+  const forgotBtn = document.getElementById('forgot-password-link');
+  const form = document.getElementById('auth-form') as HTMLFormElement | null;
+  const nameWrap = document.getElementById('auth-name-wrap');
+  const nameInput = document.getElementById('auth-name') as HTMLInputElement | null;
+  const emailInput = document.getElementById('auth-email') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('auth-password') as HTMLInputElement | null;
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const submitText = document.getElementById('submit-btn-text');
+  const spinner = document.getElementById('submit-btn-spinner');
+  const errorBanner = document.getElementById('auth-error-banner');
+  const gateBanner = document.getElementById('auth-gate-banner');
+  const gateBannerText = document.getElementById('auth-gate-banner-text');
+
+  const tabLogin = document.getElementById('tab-login') as HTMLButtonElement | null;
+  const tabRegister = document.getElementById('tab-register') as HTMLButtonElement | null;
+  const authTitle = document.getElementById('auth-modal-title');
+  const authDesc = document.getElementById('auth-modal-desc');
+
+  // Chooser elements
+  const chooserIconGoogle = document.getElementById('chooser-icon-google');
+  const chooserIconApple = document.getElementById('chooser-icon-apple');
+  const chooserHeaderLabel = document.getElementById('chooser-header-label');
+  const chooserBackBtn = document.getElementById('chooser-back-btn');
+  const chooserCancelFooter = document.getElementById('chooser-cancel-footer');
+  const chooserAccountsList = document.getElementById('chooser-accounts-list');
+  const chooserUseAnotherBtn = document.getElementById('chooser-use-another-btn');
+  const chooserUseAnotherLabel = document.getElementById('chooser-use-another-label');
+  const chooserCustomForm = document.getElementById('chooser-custom-form') as HTMLFormElement | null;
+  const chooserCustomName = document.getElementById('chooser-custom-name') as HTMLInputElement | null;
+  const chooserCustomEmail = document.getElementById('chooser-custom-email') as HTMLInputElement | null;
+  const chooserCustomEmailLabel = document.getElementById('chooser-custom-email-label');
+  const chooserCustomError = document.getElementById('chooser-custom-error');
+  const chooserCustomCancel = document.getElementById('chooser-custom-cancel');
+
+  let isRegisterTab = false;
+  let activeChooserProvider: 'google' | 'apple' = 'google';
+
+  function loadChooserAccounts(provider: 'google' | 'apple'): ChooserAccount[] {
+    const defaults = getDefaultChooserAccounts(provider);
+    try {
+      const raw = localStorage.getItem(CHOOSER_ACCOUNTS_KEY);
+      if (!raw) return defaults;
+      const stored = JSON.parse(raw) as ChooserAccount[];
+      if (!Array.isArray(stored)) return defaults;
+      const customForProvider = stored.filter((a) => a.provider === provider);
+      const merged = [...customForProvider];
+      for (const def of defaults) {
+        if (!merged.some((m) => m.email.toLowerCase() === def.email.toLowerCase())) {
+          merged.push(def);
+        }
+      }
+      return merged;
+    } catch {
+      return defaults;
+    }
+  }
+
+  function saveCustomChooserAccount(account: ChooserAccount) {
+    try {
+      const raw = localStorage.getItem(CHOOSER_ACCOUNTS_KEY);
+      const stored: ChooserAccount[] = raw ? JSON.parse(raw) : [];
+      const filtered = Array.isArray(stored)
+        ? stored.filter((a) => a.email.toLowerCase() !== account.email.toLowerCase())
+        : [];
+      filtered.unshift(account);
+      localStorage.setItem(CHOOSER_ACCOUNTS_KEY, JSON.stringify(filtered.slice(0, 15)));
+    } catch {}
+  }
+
+  function showMainCardView() {
+    authChooserCard?.classList.add('hidden');
+    authChooserCard?.classList.remove('flex');
+    authModalCard?.classList.remove('hidden');
+    chooserCustomForm?.classList.add('hidden');
+    chooserCustomForm?.classList.remove('flex');
+  }
+
+  function openAccountChooser(provider: 'google' | 'apple') {
+    activeChooserProvider = provider;
+    authModalCard?.classList.add('hidden');
+    authChooserCard?.classList.remove('hidden');
+    authChooserCard?.classList.add('flex');
+    chooserCustomForm?.classList.add('hidden');
+    chooserCustomForm?.classList.remove('flex');
+    chooserCustomError?.classList.add('hidden');
+
+    if (provider === 'google') {
+      chooserIconGoogle?.classList.remove('hidden');
+      chooserIconApple?.classList.add('hidden');
+      if (chooserHeaderLabel) chooserHeaderLabel.textContent = 'Sign in with Google';
+      if (chooserUseAnotherLabel) chooserUseAnotherLabel.textContent = 'Use another account';
+      if (chooserCustomEmailLabel) chooserCustomEmailLabel.textContent = 'Google Email (@gmail.com)';
+      if (chooserCustomEmail) chooserCustomEmail.placeholder = 'you@gmail.com';
+    } else {
+      chooserIconGoogle?.classList.add('hidden');
+      chooserIconApple?.classList.remove('hidden');
+      if (chooserHeaderLabel) chooserHeaderLabel.textContent = 'Sign in with Apple Mail';
+      if (chooserUseAnotherLabel) chooserUseAnotherLabel.textContent = 'Use another Apple Mail account';
+      if (chooserCustomEmailLabel) chooserCustomEmailLabel.textContent = 'Apple Mail (@icloud.com / @me.com)';
+      if (chooserCustomEmail) chooserCustomEmail.placeholder = 'you@icloud.com';
+    }
+
+    renderChooserAccounts();
+  }
+
+  function renderChooserAccounts() {
+    if (!chooserAccountsList) return;
+    chooserAccountsList.innerHTML = '';
+    const accounts = loadChooserAccounts(activeChooserProvider);
+
+    for (const acc of accounts) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className =
+        'chooser-account-btn flex items-center gap-3.5 py-3.5 px-2 hover:bg-white/[0.05] transition cursor-pointer text-left w-full';
+      btn.setAttribute('data-email', acc.email);
+
+      const avatar = document.createElement('img');
+      avatar.src = acc.avatarUrl || createAvatarDataUri(acc.name, acc.provider);
+      avatar.alt = acc.name;
+      avatar.className = 'w-8 h-8 rounded-full object-cover shrink-0';
+
+      const info = document.createElement('div');
+      info.className = 'min-w-0 flex-1';
+
+      const nameEl = document.createElement('p');
+      nameEl.className = 'text-sm font-medium text-[#e3e3e3] truncate leading-snug';
+      nameEl.textContent = acc.name;
+
+      const emailEl = document.createElement('p');
+      emailEl.className = 'text-xs text-[#9aa0a6] truncate leading-snug';
+      emailEl.textContent = acc.email;
+
+      info.appendChild(nameEl);
+      info.appendChild(emailEl);
+      btn.appendChild(avatar);
+      btn.appendChild(info);
+
+      btn.addEventListener('click', () => {
+        completeLogin({
+          provider: activeChooserProvider,
+          email: acc.email,
+          name: acc.name,
+        });
+      });
+
+      chooserAccountsList.appendChild(btn);
+    }
+  }
+
+  chooserBackBtn?.addEventListener('click', showMainCardView);
+  chooserCancelFooter?.addEventListener('click', closeModal);
+
+  chooserUseAnotherBtn?.addEventListener('click', () => {
+    chooserCustomForm?.classList.remove('hidden');
+    chooserCustomForm?.classList.add('flex');
+    if (chooserCustomName) chooserCustomName.value = '';
+    if (chooserCustomEmail) {
+      chooserCustomEmail.value = '';
+      chooserCustomEmail.focus();
+    }
+  });
+
+  chooserCustomCancel?.addEventListener('click', () => {
+    chooserCustomForm?.classList.add('hidden');
+    chooserCustomForm?.classList.remove('flex');
+    chooserCustomError?.classList.add('hidden');
+  });
+
+  chooserCustomForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rawEmail = chooserCustomEmail?.value.trim() || '';
+    const rawName = chooserCustomName?.value.trim() || '';
+
+    if (!rawEmail || !rawEmail.includes('@')) {
+      if (chooserCustomError) {
+        chooserCustomError.textContent = 'Please enter a valid email address.';
+        chooserCustomError.classList.remove('hidden');
+      }
+      chooserCustomEmail?.focus();
+      return;
+    }
+
+    const finalName = deriveDisplayName(rawEmail, rawName);
+    const newAccount: ChooserAccount = {
+      name: finalName,
+      email: rawEmail,
+      avatarUrl: createAvatarDataUri(finalName, activeChooserProvider),
+      provider: activeChooserProvider,
+    };
+
+    saveCustomChooserAccount(newAccount);
+    completeLogin({
+      provider: activeChooserProvider,
+      email: newAccount.email,
+      name: newAccount.name,
+    });
+  });
+
+  function showBanner(message: string, isInfo = false) {
+    if (!errorBanner) return;
+    errorBanner.textContent = message;
+    errorBanner.className = isInfo
+      ? 'px-3.5 py-2.5 bg-primary/15 border border-primary/30 rounded-lg text-xs text-primary-hover font-sans'
+      : 'px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 font-sans';
+  }
+
+  function hideBanner() {
+    errorBanner?.classList.add('hidden');
+  }
 
   function closeModal() {
-    authModal?.classList.add("opacity-0", "pointer-events-none");
-    authModalCard?.classList.add("translate-y-4");
+    authModal?.classList.add('opacity-0', 'pointer-events-none');
+    authModalCard?.classList.add('translate-y-4');
+    hideBanner();
+    showMainCardView();
   }
 
   function switchTab(registerMode: boolean) {
     isRegisterTab = registerMode;
-    errorBanner?.classList.add("hidden");
+    hideBanner();
 
     if (isRegisterTab) {
-      tabRegister.classList.add("border-primary", "bg-white/[0.02]");
-      tabRegister.classList.remove("border-transparent", "text-ink-subtle");
-      tabRegister.setAttribute("aria-pressed", "true");
+      tabRegister?.classList.add('border-primary', 'bg-white/[0.02]', 'text-ink');
+      tabRegister?.classList.remove('border-transparent', 'text-ink-subtle');
+      tabRegister?.setAttribute('aria-pressed', 'true');
 
-      tabLogin.classList.remove("border-primary", "bg-white/[0.02]");
-      tabLogin.classList.add("border-transparent", "text-ink-subtle");
-      tabLogin.setAttribute("aria-pressed", "false");
+      tabLogin?.classList.remove('border-primary', 'bg-white/[0.02]', 'text-ink');
+      tabLogin?.classList.add('border-transparent', 'text-ink-subtle');
+      tabLogin?.setAttribute('aria-pressed', 'false');
 
-      if (authTitle) authTitle.textContent = "Create an Account";
-      if (authDesc) authDesc.textContent = "Save your setups, notes, streaks, and playlists.";
-      if (submitText) submitText.textContent = "Sign Up";
+      nameWrap?.classList.remove('hidden');
+      nameWrap?.classList.add('flex');
+
+      if (authTitle) authTitle.textContent = 'Create an Account';
+      if (authDesc) authDesc.textContent = 'Save your setups, notes, streaks, and playlists.';
+      if (submitText) submitText.textContent = 'Create Account';
     } else {
-      tabLogin.classList.add("border-primary", "bg-white/[0.02]");
-      tabLogin.classList.remove("border-transparent", "text-ink-subtle");
-      tabLogin.setAttribute("aria-pressed", "true");
+      tabLogin?.classList.add('border-primary', 'bg-white/[0.02]', 'text-ink');
+      tabLogin?.classList.remove('border-transparent', 'text-ink-subtle');
+      tabLogin?.setAttribute('aria-pressed', 'true');
 
-      tabRegister.classList.remove("border-primary", "bg-white/[0.02]");
-      tabRegister.classList.add("border-transparent", "text-ink-subtle");
-      tabRegister.setAttribute("aria-pressed", "false");
+      tabRegister?.classList.remove('border-primary', 'bg-white/[0.02]', 'text-ink');
+      tabRegister?.classList.add('border-transparent', 'text-ink-subtle');
+      tabRegister?.setAttribute('aria-pressed', 'false');
 
-      if (authTitle) authTitle.textContent = "Welcome to StudyAesthetic";
-      if (authDesc) authDesc.textContent = "Sync your layouts, statistics, and preferences across devices.";
-      if (submitText) submitText.textContent = "Sign In";
+      nameWrap?.classList.add('hidden');
+      nameWrap?.classList.remove('flex');
+
+      if (authTitle) authTitle.textContent = 'Welcome to StudyAesthetic';
+      if (authDesc) authDesc.textContent = 'Sync your layouts, statistics, and preferences across devices.';
+      if (submitText) submitText.textContent = 'Sign In';
     }
   }
 
-  tabLogin?.addEventListener("click", () => switchTab(false));
-  tabRegister?.addEventListener("click", () => switchTab(true));
-  closeLink?.addEventListener("click", closeModal);
-  
-  // Close on backdrop click
-  authModal?.addEventListener("click", (e) => {
+  tabLogin?.addEventListener('click', () => switchTab(false));
+  tabRegister?.addEventListener('click', () => switchTab(true));
+  closeLink?.addEventListener('click', closeModal);
+
+  authModal?.addEventListener('click', (e) => {
     if (e.target === authModal) closeModal();
   });
 
-  // Handle Simulated Auth Actions
-  function loginUser(name: string, email: string, isDemo = false) {
-    if (submitBtn) submitBtn.setAttribute("disabled", "true");
-    spinner?.classList.remove("hidden");
-    if (submitText) submitText.textContent = isDemo ? "Synchronizing..." : (isRegisterTab ? "Signing Up..." : "Signing In...");
+  forgotBtn?.addEventListener('click', () => {
+    const email = emailInput?.value.trim() || '';
+    if (!email || !email.includes('@')) {
+      showBanner('Enter your email address above first to reset your password.');
+      emailInput?.focus();
+      return;
+    }
+    showBanner(`Password reset instructions sent to ${email}.`, true);
+  });
 
-    // Simulate network save latency of 1s
+  async function completeLogin(options: {
+    provider: SignedInProvider;
+    email?: string;
+    name?: string;
+    password?: string;
+  }) {
+    hideBanner();
+    if (submitBtn) submitBtn.setAttribute('disabled', 'true');
+    spinner?.classList.remove('hidden');
+    if (submitText) {
+      submitText.textContent =
+        options.provider === 'google'
+          ? 'Connecting Google...'
+          : options.provider === 'apple'
+          ? 'Connecting Apple Mail...'
+          : options.provider === 'demo'
+          ? 'Synchronizing...'
+          : isRegisterTab
+          ? 'Creating Account...'
+          : 'Signing In...';
+    }
+
+    let resolvedId: string | undefined;
+    const resolvedName = options.name;
+    const resolvedEmail = options.email;
+
+    if (isSupabaseConfigured && supabase && options.provider === 'email' && resolvedEmail && options.password) {
+      try {
+        if (isRegisterTab) {
+          const { data } = await supabase.auth.signUp({
+            email: resolvedEmail,
+            password: options.password,
+            options: { data: { full_name: resolvedName } },
+          });
+          if (data?.user?.id) resolvedId = data.user.id;
+        } else {
+          const { data } = await supabase.auth.signInWithPassword({
+            email: resolvedEmail,
+            password: options.password,
+          });
+          if (data?.user?.id) resolvedId = data.user.id;
+        }
+      } catch {}
+    }
+
     setTimeout(() => {
-      const userProfile = {
-        id: `user-${Date.now()}`,
-        name: name,
-        email: email,
-        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${name}`,
-        authProvider: isDemo ? 'anonymous' : 'email',
-        createdAt: new Date().toISOString(),
-        lastActiveAt: new Date().toISOString()
-      };
+      const userProfile = buildSignedInProfile({
+        provider: options.provider,
+        email: resolvedEmail,
+        name: resolvedName,
+        existingId: resolvedId,
+      });
 
-      // Set user profile state in localStorage
-      localStorage.setItem("sa_user_profile_v1", JSON.stringify(userProfile));
+      try {
+        const accountsRaw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
+        const accounts: Record<string, { name: string; email: string; provider: string }> =
+          accountsRaw ? JSON.parse(accountsRaw) : {};
+        const key = userProfile.email.toLowerCase();
+        if (!isRegisterTab && accounts[key]?.name && !options.name) {
+          userProfile.name = accounts[key].name;
+        } else {
+          accounts[key] = {
+            name: userProfile.name,
+            email: userProfile.email,
+            provider: userProfile.authProvider,
+          };
+          localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(accounts));
+        }
+      } catch {}
 
-      // Mock user preferences and sync default demo data if needed
-      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
-      prefs.userId = userProfile.id;
-      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+      localStorage.setItem('sa_user_profile_v1', JSON.stringify(userProfile));
 
-      // Reset submit state
-      if (submitBtn) submitBtn.removeAttribute("disabled");
-      spinner?.classList.add("hidden");
-      
+      try {
+        const prefs = JSON.parse(localStorage.getItem('sa_user_prefs_v1') || '{}');
+        prefs.userId = userProfile.id;
+        localStorage.setItem('sa_user_prefs_v1', JSON.stringify(prefs));
+      } catch {}
+
+      if (submitBtn) submitBtn.removeAttribute('disabled');
+      spinner?.classList.add('hidden');
+      if (submitText) submitText.textContent = isRegisterTab ? 'Create Account' : 'Sign In';
+
       closeModal();
 
-      // Dispatch auth change event so header and layouts update
-      document.dispatchEvent(new CustomEvent("auth-state-changed", {
-        detail: { loggedIn: true, user: userProfile }
-      }));
-    }, 1200);
+      document.dispatchEvent(
+        new CustomEvent('auth-state-changed', {
+          detail: { loggedIn: true, user: userProfile },
+        })
+      );
+    }, 220);
   }
 
-  form?.addEventListener("submit", (e) => {
+  form?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = (document.getElementById("auth-email") as HTMLInputElement).value;
-    const emailName = email.split('@')[0];
-    const name = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-    loginUser(name, email, false);
+    const email = emailInput?.value.trim() || '';
+    const password = passwordInput?.value || '';
+    const customName = nameInput?.value.trim() || '';
+
+    if (!email || !email.includes('@')) {
+      showBanner('Please enter a valid email address.');
+      emailInput?.focus();
+      return;
+    }
+    if (password.length < 4) {
+      showBanner('Please enter a password (at least 4 characters).');
+      passwordInput?.focus();
+      return;
+    }
+
+    completeLogin({
+      provider: 'email',
+      email,
+      name: customName || undefined,
+      password,
+    });
   });
 
-  demoBtn?.addEventListener("click", () => {
-    loginUser("Aesthetic Scholar", "scholar@studyaesthetic.com", true);
+  // Clicking Google or Apple Mail opens the authentic "Choose an account" screen
+  googleBtn?.addEventListener('click', () => {
+    openAccountChooser('google');
   });
 
-  googleBtn?.addEventListener("click", () => {
-    loginUser("Google Explorer", "google.explorer@gmail.com", true);
+  appleBtn?.addEventListener('click', () => {
+    openAccountChooser('apple');
   });
 
-  githubBtn?.addEventListener("click", () => {
-    loginUser("GitHub Coder", "git.coder@github.com", true);
+  demoBtn?.addEventListener('click', () => {
+    completeLogin({
+      provider: 'demo',
+      email: 'scholar@studyaesthetic.com',
+      name: 'Aesthetic Scholar',
+    });
   });
 
-  // Listen to open request
-  document.addEventListener("open-auth-modal", () => {
-    authModal?.classList.remove("opacity-0", "pointer-events-none");
-    authModalCard?.classList.remove("translate-y-4");
+  document.addEventListener('open-auth-modal', (e: any) => {
+    hideBanner();
+    showMainCardView();
+    const reason = e?.detail?.reason;
+    if (reason && gateBanner && gateBannerText) {
+      gateBannerText.textContent = reason;
+      gateBanner.classList.remove('hidden');
+    } else if (gateBanner) {
+      gateBanner.classList.add('hidden');
+    }
+    authModal?.classList.remove('opacity-0', 'pointer-events-none');
+    authModalCard?.classList.remove('translate-y-4');
   });
 </script>
