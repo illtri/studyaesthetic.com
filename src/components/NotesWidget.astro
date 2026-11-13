@@ -83,12 +83,14 @@
   const addNoteBtn      = document.getElementById("add-note-btn");
   const deleteNoteBtn   = document.getElementById("delete-note-btn");
 
-  const stored = localStorage.getItem("study-notes");
-  if (stored) {
-    notes = JSON.parse(stored);
-    if (notes.length > 0) activeNoteId = notes[0].id;
-    renderNotes();
-  }
+  try {
+    const stored = localStorage.getItem("study-notes");
+    if (stored) {
+      notes = JSON.parse(stored);
+      if (notes.length > 0) activeNoteId = notes[0].id;
+      renderNotes();
+    }
+  } catch {}
 
   addNoteBtn?.addEventListener("click", () => {
     const n: Note = { id: Date.now().toString(), title: `Draft ${notes.length + 1}`, content: "" };

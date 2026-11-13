@@ -326,13 +326,18 @@ import LoginModal from '../components/LoginModal.astro';
   let syncTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   function triggerCloudSync() {
-    const userProfileRaw = localStorage.getItem("sa_user_profile_v1");
-    if (!userProfileRaw) {
-      updateCloudSyncUI("local");
-      return;
-    }
-    const user = JSON.parse(userProfileRaw);
-    if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
+    try {
+      const userProfileRaw = localStorage.getItem("sa_user_profile_v1");
+      if (!userProfileRaw) {
+        updateCloudSyncUI("local");
+        return;
+      }
+      const user = JSON.parse(userProfileRaw);
+      if (user.authProvider === "anonymous" || user.name === "Study Aesthetic User") {
+        updateCloudSyncUI("local");
+        return;
+      }
+    } catch {
       updateCloudSyncUI("local");
       return;
     }
@@ -601,12 +606,14 @@ import LoginModal from '../components/LoginModal.astro';
         }
       }
 
+      try { handle.releasePointerCapture(e.pointerId); } catch {}
       document.body.classList.remove("is-dragging");
       activeDrag = null;
     });
 
-    handle.addEventListener("pointercancel", () => {
+    handle.addEventListener("pointercancel", (e: PointerEvent) => {
       if (!activeDrag || activeDrag.el !== el) return;
+      try { handle.releasePointerCapture(e.pointerId); } catch {}
       el.style.transition = "";
       el.classList.remove("is-dragging");
       document.body.classList.remove("is-dragging");
@@ -709,7 +716,8 @@ import LoginModal from '../components/LoginModal.astro';
   // Show an animated CSS gradient background as fallback during load.
   // ════════════════════════════════════════════════════════════════
 
-  let currentVideoId = "hBGwt25cJRY"; // Default: Lo-Fi Cafe
+  let currentVideoId = "5yx6BWlEVcY"; // Default: Lo-Fi Cafe
+  let currentSpaceTitle = "Lo-Fi Cafe Vibes";
   let isVideoPlaying = false;
   let playerIframe: HTMLIFrameElement | null = null;
 
@@ -735,9 +743,8 @@ import LoginModal from '../components/LoginModal.astro';
     // Show loading state
     loadingOverlay?.classList.remove("hidden");
 
-    // Remove any existing iframe
-    const existing = playerWrap.querySelector("iframe");
-    if (existing) existing.remove();
+    // Remove any existing video/iframe elements
+    playerWrap.innerHTML = "";
 
     const iframe = document.createElement("iframe");
     iframe.id          = "bg-player";
@@ -777,7 +784,7 @@ import LoginModal from '../components/LoginModal.astro';
   // Start overlay click — first user gesture satisfies autoplay policy
   startOverlay?.addEventListener("click", () => {
     startOverlay.classList.add("hidden");
-    if (spaceTitleEl) spaceTitleEl.textContent = "Lo-Fi Cafe Vibes";
+    if (spaceTitleEl) spaceTitleEl.textContent = currentSpaceTitle;
     injectPlayer(currentVideoId);
     if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
   });
@@ -787,6 +794,7 @@ import LoginModal from '../components/LoginModal.astro';
     if (!playerIframe) {
       // Player not yet started — trigger start
       startOverlay?.classList.add("hidden");
+      if (spaceTitleEl) spaceTitleEl.textContent = currentSpaceTitle;
       injectPlayer(currentVideoId);
       return;
     }
@@ -799,6 +807,15 @@ import LoginModal from '../components/LoginModal.astro';
   document.addEventListener("change-space", (e: any) => {
     const { videoId, title } = e.detail;
     currentVideoId = videoId;
+    if (title) currentSpaceTitle = title;
+
+    if (bgWrapper) {
+      bgWrapper.style.backgroundImage = "";
+      bgWrapper.classList.add("animated-bg-fallback");
+    }
+    if (playerIframe) {
+      playerIframe.style.display = "";
+    }
 
     if (spaceTitleEl && title) spaceTitleEl.textContent = title;
 
@@ -842,6 +859,7 @@ import LoginModal from '../components/LoginModal.astro';
       startOverlay?.classList.add("hidden");
     } else if (type === "video") {
       // Custom uploaded video
+      playerIframe = null;
       if (bgWrapper) bgWrapper.style.backgroundImage = "";
       if (playerWrap) {
         const vid = document.createElement("video");
@@ -853,6 +871,7 @@ import LoginModal from '../components/LoginModal.astro';
         playerWrap.innerHTML = "";
         playerWrap.appendChild(vid);
       }
+      if (title) currentSpaceTitle = title;
       if (spaceTitleEl) spaceTitleEl.textContent = title;
       startOverlay?.classList.add("hidden");
     }

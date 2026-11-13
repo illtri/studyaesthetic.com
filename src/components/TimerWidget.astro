@@ -252,7 +252,14 @@
         playAlertSound();
         if (currentMode === "pomodoro") recordCompletedSession();
         resetTimer();
-        alert("Study session complete! Take a break.");
+        if (statusDisplay) {
+          statusDisplay.textContent = "Session Complete!";
+          setTimeout(() => {
+            if (!isRunning && statusDisplay) {
+              statusDisplay.textContent = currentMode === "pomodoro" ? "Focusing" : "Relaxing";
+            }
+          }, 5000);
+        }
       }
     }, 1000);
   }
