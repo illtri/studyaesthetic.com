@@ -59,7 +59,7 @@
             </svg>
             <span class="text-[9px] font-semibold uppercase tracking-wide">Today</span>
           </div>
-          <p id="stat-today" class="font-mono text-lg font-bold text-ink leading-none">0m</p>
+          <p id="stat-today" class="font-mono text-lg font-bold text-ink leading-none">0s</p>
           <p class="text-[9px] text-ink-subtle">focus time</p>
         </div>
 
@@ -71,7 +71,7 @@
             </svg>
             <span class="text-[9px] font-semibold uppercase tracking-wide">This Week</span>
           </div>
-          <p id="stat-week" class="font-mono text-lg font-bold text-ink leading-none">0m</p>
+          <p id="stat-week" class="font-mono text-lg font-bold text-ink leading-none">0s</p>
           <p class="text-[9px] text-ink-subtle">focus time</p>
         </div>
 
@@ -106,7 +106,7 @@
           <span class="text-base" aria-hidden="true">📚</span>
           <div>
             <p class="text-[10px] text-ink-subtle">Total Study Time</p>
-            <p id="stat-total" class="font-mono text-sm font-bold text-ink">0h 0m</p>
+            <p id="stat-total" class="font-mono text-sm font-bold text-ink">0s</p>
           </div>
         </div>
         <div class="text-right">
@@ -123,7 +123,7 @@
       <!-- Day labels -->
       <div id="heatmap-labels" class="grid grid-cols-7 gap-1 mb-1"></div>
       <!-- Heatmap cells -->
-      <div id="heatmap-grid" class="grid grid-cols-7 gap-1 mb-3"></div>
+      <div id="heatmap-grid" class="grid grid-cols-7 gap-1 justify-items-center mb-3"></div>
 
       <!-- Legend -->
       <div class="flex items-center gap-2 mb-4">
@@ -139,7 +139,7 @@
 
       <!-- Weekly bar chart -->
       <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-2">Daily Focus (mins)</p>
-      <div id="bar-chart" class="flex items-end gap-1.5 h-16"></div>
+      <div id="bar-chart" class="flex items-end gap-1.5 h-20 pt-2"></div>
     </div>
 
     <!-- ── Achievements Tab ──────────────────────────────── -->
@@ -147,7 +147,7 @@
       <p class="text-[10px] text-ink-subtle uppercase tracking-wider font-semibold mb-3">
         Achievements <span id="badge-count" class="text-primary"></span>
       </p>
-      <div id="achievements-grid" class="grid grid-cols-3 gap-2"></div>
+      <div id="achievements-grid" class="grid grid-cols-2 gap-2 max-h-[260px] overflow-y-auto pr-0.5"></div>
     </div>
 
   </div>
@@ -177,6 +177,17 @@
 </style>
 
 <script>
+  import {
+    type StudyStats,
+    type ActivityDay,
+    type SessionRecord,
+    normalizeAndCalculateStats,
+    formatFocusDuration,
+    getHeatmapLevel,
+    localDateKey,
+    getDaySeconds,
+  } from "../utils/studyStats";
+
   // ── Minimize ────────────────────────────────────────────────────
   const widget      = document.getElementById("stats-widget");
   const minimizeBtn = widget?.querySelector(".minimize-btn");
@@ -202,59 +213,52 @@
     });
   });
 
-  // ── Time formatting ─────────────────────────────────────────────
-  function fmtSeconds(secs: number): string {
-    if (secs < 60)   return `${secs}s`;
-    if (secs < 3600) return `${Math.floor(secs / 60)}m`;
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }
-
-  // ── Load + render stats ─────────────────────────────────────────
-  interface StudyStats {
-    totalFocusSeconds:      number;
-    todayFocusSeconds:      number;
-    weekFocusSeconds:       number;
-    totalSessionsCompleted: number;
-    avgSessionDuration:     number;
-    longestSession:         number;
-    currentStreak:          number;
-    longestStreak:          number;
-    achievements:           string[];
-  }
-
-  interface ActivityDay {
-    date:         string;
-    focusMinutes: number;
-    sessionsCompleted: number;
-  }
-
-  function getStats(): StudyStats | null {
+  // ── Load + normalize stats ──────────────────────────────────────
+  function readJson<T>(key: string, fallback: T): T {
     try {
-      const raw = localStorage.getItem("sa_stats_v1");
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  }
+
+  function loadNormalizedStats(): { stats: StudyStats; activity: Record<string, ActivityDay> } {
+    const sessions  = readJson<SessionRecord[]>("sa_sessions_v1", []);
+    const activity  = readJson<Record<string, Partial<ActivityDay>>>("sa_activity_v1", {});
+    const prevStats = readJson<Partial<StudyStats> | null>("sa_stats_v1", null);
+    const normalized = normalizeAndCalculateStats(sessions, activity, prevStats);
+    try {
+      localStorage.setItem("sa_activity_v1", JSON.stringify(normalized.activity));
+      localStorage.setItem("sa_stats_v1", JSON.stringify(normalized.stats));
+    } catch {}
+    return normalized;
+  }
+
+  function getStats(): StudyStats {
+    return loadNormalizedStats().stats;
   }
 
   function getActivity(days = 7): ActivityDay[] {
-    try {
-      const raw      = localStorage.getItem("sa_activity_v1");
-      const activity = raw ? JSON.parse(raw) : {};
-      const result: ActivityDay[] = [];
-      for (let i = days - 1; i >= 0; i--) {
-        const d   = new Date();
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split("T")[0];
-        result.push(activity[key] || { date: key, focusMinutes: 0, sessionsCompleted: 0 });
-      }
-      return result;
-    } catch { return []; }
+    const { activity } = loadNormalizedStats();
+    const result: ActivityDay[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = localDateKey(d);
+      result.push(activity[key] || {
+        date: key,
+        focusSeconds: 0,
+        focusMinutes: 0,
+        sessionsCompleted: 0,
+        tasksCompleted: 0,
+        backgroundsUsed: [],
+        widgetsUsed: [],
+      });
+    }
+    return result;
   }
 
-  function renderOverview() {
-    const stats = getStats();
-    if (!stats) return;
+  function renderOverview(statsOverride?: StudyStats) {
+    const stats = statsOverride || getStats();
 
     const todayEl    = document.getElementById("stat-today");
     const weekEl     = document.getElementById("stat-week");
@@ -265,16 +269,20 @@
     const streakBn   = document.getElementById("streak-banner");
     const streakTxt  = document.getElementById("streak-text");
 
-    if (todayEl)   todayEl.textContent   = fmtSeconds(stats.todayFocusSeconds);
-    if (weekEl)    weekEl.textContent    = fmtSeconds(stats.weekFocusSeconds);
+    if (todayEl)   todayEl.textContent   = formatFocusDuration(stats.todayFocusSeconds);
+    if (weekEl)    weekEl.textContent    = formatFocusDuration(stats.weekFocusSeconds);
     if (sessEl)    sessEl.textContent    = stats.totalSessionsCompleted.toString();
-    if (longEl)    longEl.textContent    = stats.longestSession > 0 ? fmtSeconds(stats.longestSession) : "—";
-    if (totalEl)   totalEl.textContent   = fmtSeconds(stats.totalFocusSeconds);
-    if (avgEl)     avgEl.textContent     = stats.avgSessionDuration > 0 ? fmtSeconds(stats.avgSessionDuration) : "—";
+    if (longEl)    longEl.textContent    = stats.longestSession > 0 ? formatFocusDuration(stats.longestSession) : "—";
+    if (totalEl)   totalEl.textContent   = formatFocusDuration(stats.totalFocusSeconds);
+    if (avgEl)     avgEl.textContent     = stats.avgSessionDuration > 0 ? formatFocusDuration(stats.avgSessionDuration) : "—";
 
-    if (stats.currentStreak > 0 && streakBn && streakTxt) {
-      streakBn.classList.remove("hidden");
-      streakTxt.textContent = `${stats.currentStreak} day${stats.currentStreak > 1 ? "s" : ""} streak`;
+    if (streakBn && streakTxt) {
+      if (stats.currentStreak > 0) {
+        streakBn.classList.remove("hidden");
+        streakTxt.textContent = `${stats.currentStreak} day${stats.currentStreak > 1 ? "s" : ""} streak`;
+      } else {
+        streakBn.classList.add("hidden");
+      }
     }
   }
 
@@ -286,74 +294,78 @@
     if (!labelsEl || !gridEl || !barChartEl) return;
 
     const days    = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const maxMins = Math.max(...data.map(d => d.focusMinutes), 1);
+    const maxSecs = Math.max(...data.map(d => getDaySeconds(d)), 60);
 
-    labelsEl.innerHTML = "";
-    gridEl.innerHTML   = "";
+    labelsEl.innerHTML   = "";
+    gridEl.innerHTML     = "";
     barChartEl.innerHTML = "";
 
     data.forEach(day => {
-      const date      = new Date(day.date + "T12:00:00");
-      const mins      = day.focusMinutes;
-      const level     = mins === 0 ? 0
-        : mins < 15  ? 1
-        : mins < 30  ? 2
-        : mins < 60  ? 3
-        : mins < 120 ? 4 : 5;
+      const date  = new Date(day.date + "T12:00:00");
+      const secs  = getDaySeconds(day);
+      const mins  = Math.round((secs / 60) * 10) / 10;
+      const level = getHeatmapLevel(secs);
 
-      // Label
+      // Day letter label
       const label = document.createElement("div");
       label.textContent = days[date.getDay()].slice(0, 1);
       label.className   = "text-center text-[9px] text-ink-subtle font-mono";
       labelsEl.appendChild(label);
 
-      // Cell
+      // Centered heatmap square
       const cell = document.createElement("div");
-      cell.className = "heatmap-cell";
+      cell.className = "heatmap-cell mx-auto";
       if (level > 0) cell.setAttribute("data-level", level.toString());
-      cell.title = `${day.date}: ${mins}m`;
+      cell.title = `${day.date}: ${formatFocusDuration(secs)}`;
       gridEl.appendChild(cell);
 
-      // Bar
+      // Bar column with full height track
       const barWrap = document.createElement("div");
-      barWrap.className = "flex-1 flex flex-col items-center gap-1";
+      barWrap.className = "flex-1 h-full flex flex-col items-center gap-1";
+
+      const barTrack = document.createElement("div");
+      barTrack.className = "w-full flex-1 flex items-end justify-center";
 
       const bar = document.createElement("div");
-      const pct = (mins / maxMins) * 100;
-      bar.className = "w-full rounded-sm transition-all duration-500";
-      bar.style.height = `${Math.max(pct, 2)}%`;
+      const pct = secs > 0 ? Math.max((secs / maxSecs) * 100, 10) : 0;
+      bar.className = "w-full max-w-[22px] rounded-t-sm transition-all duration-300";
+      bar.style.height = secs > 0 ? `${pct}%` : "4px";
       bar.style.background = level > 0
-        ? `rgba(94, 106, 210, ${0.3 + level * 0.14})`
+        ? `rgba(94, 106, 210, ${0.35 + level * 0.13})`
         : "var(--color-surface-2)";
-      bar.title = `${mins}m`;
+      bar.style.border = level > 0
+        ? "1px solid rgba(130, 143, 255, 0.35)"
+        : "1px solid var(--color-hairline)";
+      bar.title = `${day.date}: ${mins}m (${formatFocusDuration(secs)})`;
 
       const dayLbl = document.createElement("span");
-      dayLbl.className   = "text-[8px] text-ink-subtle font-mono";
+      dayLbl.className   = "text-[8px] text-ink-subtle font-mono shrink-0";
       dayLbl.textContent = days[date.getDay()].slice(0, 1);
 
-      barWrap.appendChild(bar);
+      barTrack.appendChild(bar);
+      barWrap.appendChild(barTrack);
       barWrap.appendChild(dayLbl);
       barChartEl.appendChild(barWrap);
     });
   }
 
   function renderAchievements() {
-    const stats      = getStats();
-    const gridEl     = document.getElementById("achievements-grid");
-    const countEl    = document.getElementById("badge-count");
+    const stats   = getStats();
+    const gridEl  = document.getElementById("achievements-grid");
+    const countEl = document.getElementById("badge-count");
     if (!gridEl) return;
 
     const ACHIEVEMENTS = [
-      { id: "first_session",  title: "First Focus",       icon: "🎯", desc: "Complete your first session" },
-      { id: "ten_sessions",   title: "Getting Serious",   icon: "🔟", desc: "Complete 10 sessions" },
-      { id: "fifty_sessions", title: "Study Master",      icon: "🏆", desc: "Complete 50 sessions" },
-      { id: "one_hour",       title: "In the Zone",       icon: "⏱️", desc: "1 hour total focus" },
-      { id: "ten_hours",      title: "Deep Worker",       icon: "🧠", desc: "10 hours total focus" },
-      { id: "hundred_hours",  title: "Scholar",           icon: "📚", desc: "100 hours total focus" },
-      { id: "streak_3",       title: "On a Roll",         icon: "🔥", desc: "3 day streak" },
-      { id: "streak_7",       title: "Weekly Warrior",    icon: "⚡", desc: "7 day streak" },
-      { id: "streak_30",      title: "Unstoppable",       icon: "🌟", desc: "30 day streak" },
-      { id: "long_session",   title: "Marathon",          icon: "🏃", desc: "Session > 1 hour" },
+      { id: "first_session",  title: "First Focus",     icon: "🎯", desc: "Complete 1 session" },
+      { id: "ten_sessions",   title: "Getting Serious", icon: "🔟", desc: "Complete 10 sessions" },
+      { id: "fifty_sessions", title: "Study Master",    icon: "🏆", desc: "Complete 50 sessions" },
+      { id: "one_hour",       title: "In the Zone",     icon: "⏱️", desc: "1 hour total focus" },
+      { id: "ten_hours",      title: "Deep Worker",     icon: "🧠", desc: "10 hours total focus" },
+      { id: "hundred_hours",  title: "Scholar",         icon: "📚", desc: "100 hours total focus" },
+      { id: "streak_3",       title: "On a Roll",       icon: "🔥", desc: "3 day streak" },
+      { id: "streak_7",       title: "Weekly Warrior",  icon: "⚡", desc: "7 day streak" },
+      { id: "streak_30",      title: "Unstoppable",     icon: "🌟", desc: "30 day streak" },
+      { id: "long_session",   title: "Marathon",        icon: "🏃", desc: "Session > 1 hour" },
     ];
 
     const unlocked = stats?.achievements || [];
@@ -363,14 +375,17 @@
     ACHIEVEMENTS.forEach(a => {
       const isUnlocked = unlocked.includes(a.id);
       const badge = document.createElement("div");
-      badge.className = `achievement-badge flex flex-col items-center gap-1.5 p-2.5 rounded-lg border cursor-default text-center ${isUnlocked
-        ? "bg-primary/10 border-primary/30"
-        : "bg-surface-2/40 border-hairline locked"}`;
+      badge.className = `achievement-badge flex items-center gap-2 p-2 rounded-lg border cursor-default text-left ${isUnlocked
+        ? "bg-primary/15 border-primary/40"
+        : "bg-surface-2/60 border-hairline-strong/60 locked"}`;
       badge.title = a.desc;
-      badge.setAttribute("aria-label", `${a.title}: ${isUnlocked ? "Unlocked" : "Locked"}`);
+      badge.setAttribute("aria-label", `${a.title}: ${isUnlocked ? "Unlocked" : "Locked"} — ${a.desc}`);
       badge.innerHTML = `
-        <span class="text-xl" aria-hidden="true">${a.icon}</span>
-        <span class="text-[9px] font-semibold leading-tight ${isUnlocked ? "text-ink" : "text-ink-subtle"}">${a.title}</span>
+        <span class="badge-icon text-lg shrink-0" aria-hidden="true">${a.icon}</span>
+        <div class="min-w-0">
+          <p class="text-[11px] font-semibold leading-tight truncate ${isUnlocked ? "text-ink" : "text-ink-muted"}">${a.title}</p>
+          <p class="text-[9px] leading-snug text-ink-subtle truncate mt-0.5">${a.desc}</p>
+        </div>
       `;
       gridEl.appendChild(badge);
     });
@@ -406,7 +421,6 @@
     if (stats) {
       mods.pushStatsToCloud(user.id, stats as any).catch(() => {});
     }
-    // Also push activity
     try {
       const rawAct = localStorage.getItem("sa_activity_v1");
       if (rawAct) {
@@ -420,42 +434,38 @@
     const mods = await getSupabaseModules();
     if (!mods || !mods.isSupabaseConfigured) return;
 
-    // Pull stats
     const cloudStats = await mods.pullStatsFromCloud(userId);
     if (cloudStats) {
-      // Merge: take cloud values if they're larger (conservative merge)
       const local = getStats();
       const merged = {
         ...(local || {}),
         ...cloudStats,
-        // Always keep the higher numbers so we don't regress
         totalFocusSeconds:      Math.max(local?.totalFocusSeconds || 0,      cloudStats.totalFocusSeconds || 0),
         totalSessionsCompleted: Math.max(local?.totalSessionsCompleted || 0,  cloudStats.totalSessionsCompleted || 0),
         longestSession:         Math.max(local?.longestSession || 0,          cloudStats.longestSession || 0),
         longestStreak:          Math.max(local?.longestStreak || 0,           cloudStats.longestStreak || 0),
-        // Merge achievements (union)
         achievements:           [...new Set([...(local?.achievements || []), ...(cloudStats.achievements || [])])],
       };
       try { localStorage.setItem("sa_stats_v1", JSON.stringify(merged)); } catch {}
     }
 
-    // Pull activity
     const cloudActivity = await mods.pullActivityFromCloud(userId);
     if (cloudActivity) {
       try {
         const rawLocal = localStorage.getItem("sa_activity_v1");
         const localActivity: Record<string, any> = rawLocal ? JSON.parse(rawLocal) : {};
-        // Merge by date key — keep the max focus minutes
         for (const [date, dayData] of Object.entries(cloudActivity)) {
           const cloudDay = dayData as any;
           const localDay = localActivity[date];
           if (!localDay) {
             localActivity[date] = cloudDay;
           } else {
+            const mergedSecs = Math.max(getDaySeconds(localDay), getDaySeconds(cloudDay));
             localActivity[date] = {
               ...localDay,
-              focusMinutes:      Math.max(localDay.focusMinutes || 0,      cloudDay.focusMinutes || 0),
-              sessionsCompleted: Math.max(localDay.sessionsCompleted || 0,  cloudDay.sessionsCompleted || 0),
+              focusSeconds:      mergedSecs,
+              focusMinutes:      Math.round((mergedSecs / 60) * 10) / 10,
+              sessionsCompleted: Math.max(localDay.sessionsCompleted || 0, cloudDay.sessionsCompleted || 0),
             };
           }
         }
@@ -463,72 +473,51 @@
       } catch {}
     }
 
-    renderOverview();
-    // Refresh heatmap if visible
+    // Re-normalize merged stats so today <= week <= total is always satisfied
+    const { stats } = loadNormalizedStats();
+    renderOverview(stats);
     const heatmapPanel = document.getElementById("stats-panel-heatmap");
     if (heatmapPanel && !heatmapPanel.classList.contains("hidden")) renderHeatmap();
+    const achPanel = document.getElementById("stats-panel-achievements");
+    if (achPanel && !achPanel.classList.contains("hidden")) renderAchievements();
   }
 
-  // ── Real-time tick during active timer ───────────────────────────
-  // Track in-progress session seconds for live "Today" display
-  let _liveSessionStart: number | null = null;
-  let _liveBaseSeconds  = 0;
+  function refreshActivePanels(statsOverride?: StudyStats) {
+    renderOverview(statsOverride);
+    const heatmapPanel = document.getElementById("stats-panel-heatmap");
+    if (heatmapPanel && !heatmapPanel.classList.contains("hidden")) renderHeatmap();
+    const achPanel = document.getElementById("stats-panel-achievements");
+    if (achPanel && !achPanel.classList.contains("hidden")) renderAchievements();
+  }
 
-  document.addEventListener("study-session-start", () => {
-    _liveSessionStart = Date.now();
-    // Capture current saved today seconds as the base
-    const stats = getStats();
-    _liveBaseSeconds = stats?.todayFocusSeconds ?? 0;
+  // ── Live synced updates from TimerWidget ────────────────────────
+  document.addEventListener("study-stats-updated", (e: any) => {
+    refreshActivePanels(e.detail?.stats);
   });
 
   document.addEventListener("study-session-pause", () => {
-    // Session paused — stop live accumulation but keep base
-    if (_liveSessionStart !== null) {
-      const elapsed = Math.floor((Date.now() - _liveSessionStart) / 1000);
-      _liveBaseSeconds += elapsed;
-      _liveSessionStart = null;
-    }
+    refreshActivePanels();
+    syncStatsToCloud();
   });
 
   document.addEventListener("study-session-complete", () => {
-    _liveSessionStart = null;
-    _liveBaseSeconds  = 0;
-    // Give UserStore a moment to persist to localStorage, then re-render
-    setTimeout(() => {
-      renderOverview();
-      // Also refresh heatmap if visible
-      const heatmapPanel = document.getElementById("stats-panel-heatmap");
-      if (heatmapPanel && !heatmapPanel.classList.contains("hidden")) renderHeatmap();
-      // Push to cloud
-      syncStatsToCloud();
-    }, 150);
+    refreshActivePanels();
+    syncStatsToCloud();
   });
 
-  // Live tick every second: update "Today" stat in real time while timer runs
-  setInterval(() => {
-    if (_liveSessionStart === null) return;
-    const elapsed   = Math.floor((Date.now() - _liveSessionStart) / 1000);
-    const liveTotal = _liveBaseSeconds + elapsed;
-    const todayEl   = document.getElementById("stat-today");
-    if (todayEl) todayEl.textContent = fmtSeconds(liveTotal);
-  }, 1000);
-
-  // ── Auth state changes (login / logout) ──────────────────────────
+  // ── Auth state changes (login / logout) ─────────────────────────
   document.addEventListener("auth-state-changed", async (e: any) => {
     const { loggedIn, user } = e.detail || {};
     if (loggedIn && user?.id && !LOCAL_ONLY_PROVIDERS.includes(user.authProvider || "")) {
-      // Pull cloud data and merge into localStorage, then re-render
       await pullAndMergeFromCloud(user.id);
     } else {
-      // Logged out or local — just re-render from localStorage
-      renderOverview();
+      refreshActivePanels();
     }
   });
 
-  // ── Initial render ───────────────────────────────────────────────
+  // ── Initial render ──────────────────────────────────────────────
   renderOverview();
 
-  // Also attempt cloud pull on initial load if user is already logged in
   (async () => {
     const user = getCurrentUser();
     if (user && !LOCAL_ONLY_PROVIDERS.includes(user.authProvider)) {

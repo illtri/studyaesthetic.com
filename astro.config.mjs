@@ -7,6 +7,9 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   output: 'server',
   adapter: vercel(),
+  devToolbar: {
+    enabled: false,
+  },
   server: {
     host: '0.0.0.0',
     port: 3000,

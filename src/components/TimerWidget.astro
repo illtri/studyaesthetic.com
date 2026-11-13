@@ -32,14 +32,17 @@
   <div class="widget-body px-4 pb-4 pt-4 flex flex-col items-center">
     <!-- Mode Selectors -->
     <div class="flex gap-1 p-1 bg-surface-2/60 border border-hairline rounded-lg w-full mb-5">
-      <button id="mode-pomodoro" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium bg-primary text-white cursor-pointer transition" data-time="1500">
-        Pomodoro
+      <button id="mode-pomodoro" data-mode="pomodoro" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium bg-primary text-white cursor-pointer transition flex items-center justify-center gap-1.5" data-time="1500">
+        <span>Pomodoro</span>
+        <span class="mode-running-dot hidden w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" aria-hidden="true"></span>
       </button>
-      <button id="mode-short" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="300">
-        Short Break
+      <button id="mode-short" data-mode="short" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition flex items-center justify-center gap-1.5" data-time="300">
+        <span>Short Break</span>
+        <span class="mode-running-dot hidden w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" aria-hidden="true"></span>
       </button>
-      <button id="mode-long" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition" data-time="900">
-        Long Break
+      <button id="mode-long" data-mode="long" class="timer-mode-btn flex-1 text-center py-1.5 rounded text-xs font-medium text-ink-subtle hover:text-ink cursor-pointer transition flex items-center justify-center gap-1.5" data-time="900">
+        <span>Long Break</span>
+        <span class="mode-running-dot hidden w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" aria-hidden="true"></span>
       </button>
     </div>
 
@@ -53,7 +56,7 @@
           stroke="var(--color-primary)"
           stroke-width="5"
           fill="transparent"
-          stroke-dasharray="502.6"
+          stroke-dasharray="502.65"
           stroke-dashoffset="0"
           stroke-linecap="round"
           style="transition: stroke-dashoffset 0.9s linear;"
@@ -81,14 +84,26 @@
 </div>
 
 <script>
-  // ── Timer state ─────────────────────────────────────────────────
-  type TimerMode = "pomodoro" | "short" | "long";
-  let timeLeft    = 1500;
-  let totalTime   = 1500;
-  let currentMode: TimerMode = "pomodoro";
-  let sessionStartTime: number | null = null;
-  let timerId: ReturnType<typeof setInterval> | null = null;
-  let isRunning = false;
+  import {
+    type TimerMode,
+    type MultiModeTimerState,
+    type SessionRecord,
+    type ActivityDay,
+    type StudyStats,
+    createInitialTimerState,
+    startModeTimer,
+    pauseModeTimer,
+    resetModeTimer,
+    tickRunningTimers,
+    normalizeAndCalculateStats,
+    localDateKey,
+    getDaySeconds,
+  } from "../utils/studyStats";
+
+  let timerStates: MultiModeTimerState = createInitialTimerState();
+  let activeMode: TimerMode = "pomodoro";
+  let masterInterval: ReturnType<typeof setInterval> | null = null;
+  let statusTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const display       = document.getElementById("timer-display");
   const statusDisplay = document.getElementById("timer-status");
@@ -97,7 +112,7 @@
   const startText     = document.getElementById("start-text");
   const startIcon     = document.getElementById("start-icon");
   const ring          = document.getElementById("timer-ring") as unknown as SVGCircleElement;
-  const modeButtons   = document.querySelectorAll(".timer-mode-btn");
+  const modeButtons   = document.querySelectorAll<HTMLButtonElement>(".timer-mode-btn");
   const ringCircumference = 502.65;
 
   function playAlertSound() {
@@ -119,191 +134,240 @@
     } catch (e) { console.warn("AudioContext chime failed:", e); }
   }
 
-  // ── Record session in UserStore & dispatch event ─────────────────
-  function recordCompletedSession() {
-    if (!sessionStartTime) return;
-    const endTime  = new Date().toISOString();
-    const duration = totalTime;
-
+  function readStorageJson<T>(key: string, fallback: T): T {
     try {
-      // UserStore session record
-      const sessions: any[] = JSON.parse(localStorage.getItem("sa_sessions_v1") || "[]");
-      sessions.push({
-        id:        `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        userId:    JSON.parse(localStorage.getItem("sa_user_profile_v1") || "{}").id || "anon",
-        startTime: new Date(sessionStartTime).toISOString(),
-        endTime,
-        duration,
-        mode:      currentMode,
-        completed: true,
-      });
-      localStorage.setItem("sa_sessions_v1", JSON.stringify(sessions.slice(-500)));
-
-      // Update activity
-      const today   = new Date().toISOString().split("T")[0];
-      const activity = JSON.parse(localStorage.getItem("sa_activity_v1") || "{}");
-      if (!activity[today]) {
-        activity[today] = { date: today, focusMinutes: 0, sessionsCompleted: 0, tasksCompleted: 0, backgroundsUsed: [], widgetsUsed: [] };
-      }
-      if (currentMode === "pomodoro") {
-        activity[today].focusMinutes     += Math.round(duration / 60);
-        activity[today].sessionsCompleted++;
-      }
-      localStorage.setItem("sa_activity_v1", JSON.stringify(activity));
-
-      // Recalculate stats (lightweight inline)
-      recalcStats(sessions, activity);
-    } catch {}
-
-    // Dispatch event for StatsWidget to refresh
-    document.dispatchEvent(new CustomEvent("study-session-complete", {
-      detail: { duration, mode: currentMode, endTime }
-    }));
-
-    sessionStartTime = null;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
-  function recalcStats(sessions: any[], activity: Record<string, any>) {
-    const completed = sessions.filter(s => s.completed && s.mode === "pomodoro");
-    const total     = completed.reduce((acc: number, s: any) => acc + s.duration, 0);
+  function persistFocusTick(secondsEarned: number): StudyStats | null {
+    if (secondsEarned <= 0) return null;
+    try {
+      const todayKey = localDateKey();
+      const sessions = readStorageJson<SessionRecord[]>("sa_sessions_v1", []);
+      const activity = readStorageJson<Record<string, Partial<ActivityDay>>>("sa_activity_v1", {});
+      const prevStats = readStorageJson<Partial<StudyStats> | null>("sa_stats_v1", null);
 
-    const todayKey  = new Date().toISOString().split("T")[0];
-    const weekAgo   = Date.now() - 6 * 86400000;
+      const currentDay = activity[todayKey] || {
+        date: todayKey,
+        focusSeconds: 0,
+        focusMinutes: 0,
+        sessionsCompleted: 0,
+        tasksCompleted: 0,
+        backgroundsUsed: [],
+        widgetsUsed: [],
+      };
 
-    const todaySecs = completed
-      .filter((s: any) => new Date(s.startTime).getTime() >= new Date(todayKey + "T00:00:00").getTime())
-      .reduce((a: number, s: any) => a + s.duration, 0);
+      const nextSecs = getDaySeconds(currentDay) + secondsEarned;
+      activity[todayKey] = {
+        ...currentDay,
+        date: todayKey,
+        focusSeconds: nextSecs,
+        focusMinutes: Math.round((nextSecs / 60) * 10) / 10,
+      };
 
-    const weekSecs  = completed
-      .filter((s: any) => new Date(s.startTime).getTime() >= weekAgo)
-      .reduce((a: number, s: any) => a + s.duration, 0);
-
-    const longest = completed.length ? Math.max(...completed.map((s: any) => s.duration)) : 0;
-    const avg     = completed.length ? Math.round(total / completed.length) : 0;
-
-    // Streak
-    const days      = Object.keys(activity).sort().reverse();
-    let streak      = 0;
-    const todayHas  = (activity[todayKey]?.sessionsCompleted ?? 0) > 0;
-    if (todayHas) {
-      streak = 1;
-      for (let i = 1; i < days.length; i++) {
-        const prev = new Date(days[i - 1]);
-        const curr = new Date(days[i]);
-        const diff = (prev.getTime() - curr.getTime()) / 86400000;
-        if (Math.abs(diff - 1) < 0.01 && activity[days[i]].sessionsCompleted > 0) streak++;
-        else break;
-      }
+      const normalized = normalizeAndCalculateStats(sessions, activity, prevStats);
+      localStorage.setItem("sa_activity_v1", JSON.stringify(normalized.activity));
+      localStorage.setItem("sa_stats_v1", JSON.stringify(normalized.stats));
+      return normalized.stats;
+    } catch {
+      return null;
     }
+  }
 
-    // Achievements
-    const ALL_ACH = [
-      { id: "first_session",  condition: () => completed.length >= 1    },
-      { id: "ten_sessions",   condition: () => completed.length >= 10   },
-      { id: "fifty_sessions", condition: () => completed.length >= 50   },
-      { id: "one_hour",       condition: () => total >= 3600             },
-      { id: "ten_hours",      condition: () => total >= 36000            },
-      { id: "hundred_hours",  condition: () => total >= 360000           },
-      { id: "streak_3",       condition: () => streak >= 3               },
-      { id: "streak_7",       condition: () => streak >= 7               },
-      { id: "streak_30",      condition: () => streak >= 30              },
-      { id: "long_session",   condition: () => longest >= 3600           },
-    ];
-    const achs = ALL_ACH.filter(a => a.condition()).map(a => a.id);
+  function recordCompletedSession(mode: TimerMode, duration: number) {
+    const endTime = new Date().toISOString();
+    const startTime = new Date(Date.now() - duration * 1000).toISOString();
 
-    const stats = {
-      totalFocusSeconds:      total,
-      todayFocusSeconds:      todaySecs,
-      weekFocusSeconds:       weekSecs,
-      monthFocusSeconds:      weekSecs,
-      currentStreak:          streak,
-      longestStreak:          streak,
-      totalSessionsCompleted: completed.length,
-      avgSessionDuration:     avg,
-      longestSession:         longest,
-      totalTasksCompleted:    0,
-      achievements:           achs,
-      lastCalculated:         new Date().toISOString(),
-    };
-    try { localStorage.setItem("sa_stats_v1", JSON.stringify(stats)); } catch {}
+    try {
+      const sessions = readStorageJson<SessionRecord[]>("sa_sessions_v1", []);
+      const userProfile = readStorageJson<{ id?: string }>("sa_user_profile_v1", {});
+      sessions.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        userId: userProfile.id || "anon",
+        startTime,
+        endTime,
+        duration,
+        mode,
+        completed: true,
+      });
+      const trimmedSessions = sessions.slice(-500);
+      localStorage.setItem("sa_sessions_v1", JSON.stringify(trimmedSessions));
+
+      const todayKey = localDateKey();
+      const activity = readStorageJson<Record<string, Partial<ActivityDay>>>("sa_activity_v1", {});
+      const prevStats = readStorageJson<Partial<StudyStats> | null>("sa_stats_v1", null);
+
+      if (!activity[todayKey]) {
+        activity[todayKey] = {
+          date: todayKey,
+          focusSeconds: 0,
+          focusMinutes: 0,
+          sessionsCompleted: 0,
+          tasksCompleted: 0,
+          backgroundsUsed: [],
+          widgetsUsed: [],
+        };
+      }
+
+      if (mode === "pomodoro") {
+        activity[todayKey].sessionsCompleted = Number(activity[todayKey].sessionsCompleted || 0) + 1;
+      }
+
+      const normalized = normalizeAndCalculateStats(trimmedSessions, activity, prevStats);
+      localStorage.setItem("sa_activity_v1", JSON.stringify(normalized.activity));
+      localStorage.setItem("sa_stats_v1", JSON.stringify(normalized.stats));
+
+      document.dispatchEvent(new CustomEvent("study-stats-updated", {
+        detail: { stats: normalized.stats },
+      }));
+    } catch {}
+
+    document.dispatchEvent(new CustomEvent("study-session-complete", {
+      detail: { duration, mode, endTime },
+    }));
+  }
+
+  function defaultStatusText(mode: TimerMode): string {
+    const state = timerStates[mode];
+    if (!state.isRunning && state.timeLeft < state.totalTime) return "Paused";
+    return mode === "pomodoro" ? "Focusing" : "Relaxing";
   }
 
   function updateDisplay() {
-    const m = Math.floor(timeLeft / 60);
-    const s = timeLeft % 60;
-    if (display) display.textContent = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    const current = timerStates[activeMode];
+    const m = Math.floor(current.timeLeft / 60);
+    const s = current.timeLeft % 60;
+    if (display) {
+      display.textContent = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
     if (ring) {
-      const offset = ringCircumference - (timeLeft / totalTime) * ringCircumference;
+      const ratio = current.totalTime > 0 ? current.timeLeft / current.totalTime : 0;
+      const offset = ringCircumference - ratio * ringCircumference;
       ring.style.strokeDashoffset = offset.toString();
     }
-  }
-
-  function startTimer() {
-    if (isRunning) return;
-    isRunning        = true;
-    sessionStartTime = Date.now();
-    if (startText) startText.textContent = "Pause";
-    if (startIcon) startIcon.innerHTML   = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`;
-    // Notify StatsWidget that a session started (for live tick)
-    if (currentMode === "pomodoro") {
-      document.dispatchEvent(new CustomEvent("study-session-start", { detail: { mode: currentMode } }));
+    if (startText) {
+      startText.textContent = current.isRunning ? "Pause" : "Start";
     }
-    timerId = setInterval(() => {
-      timeLeft--;
-      updateDisplay();
-      if (timeLeft <= 0) {
-        pauseTimer();
-        playAlertSound();
-        if (currentMode === "pomodoro") recordCompletedSession();
-        resetTimer();
-        if (statusDisplay) {
-          statusDisplay.textContent = "Session Complete!";
-          setTimeout(() => {
-            if (!isRunning && statusDisplay) {
-              statusDisplay.textContent = currentMode === "pomodoro" ? "Focusing" : "Relaxing";
-            }
-          }, 5000);
-        }
+    if (startIcon) {
+      startIcon.innerHTML = current.isRunning
+        ? `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`
+        : `<path d="M8 5v14l11-7z"/>`;
+    }
+    if (statusDisplay && !statusTimeout) {
+      statusDisplay.textContent = defaultStatusText(activeMode);
+    }
+
+    modeButtons.forEach((btn) => {
+      const btnMode = btn.dataset.mode as TimerMode;
+      const isSelected = btnMode === activeMode;
+      btn.classList.toggle("bg-primary", isSelected);
+      btn.classList.toggle("text-white", isSelected);
+      btn.classList.toggle("text-ink-subtle", !isSelected);
+
+      const dot = btn.querySelector(".mode-running-dot");
+      if (dot) {
+        dot.classList.toggle("hidden", !timerStates[btnMode]?.isRunning);
       }
-    }, 1000);
+    });
   }
 
-  function pauseTimer() {
-    if (!isRunning) return;
-    isRunning = false;
-    if (startText) startText.textContent = "Start";
-    if (startIcon) startIcon.innerHTML   = `<path d="M8 5v14l11-7z"/>`;
-    if (timerId)   { clearInterval(timerId); timerId = null; }
-    // Notify StatsWidget that the timer paused
-    if (currentMode === "pomodoro") {
+  function hasAnyRunningTimer(): boolean {
+    return (["pomodoro", "short", "long"] as TimerMode[]).some((m) => timerStates[m].isRunning);
+  }
+
+  function ensureMasterLoop() {
+    const anyRunning = hasAnyRunningTimer();
+    if (anyRunning && !masterInterval) {
+      masterInterval = setInterval(() => {
+        const result = tickRunningTimers(timerStates);
+        timerStates = result.nextState;
+
+        if (result.focusSecondsEarned > 0) {
+          const stats = persistFocusTick(result.focusSecondsEarned);
+          if (stats) {
+            document.dispatchEvent(new CustomEvent("study-stats-updated", { detail: { stats } }));
+          }
+        }
+
+        if (result.completedModes.length > 0) {
+          playAlertSound();
+          for (const done of result.completedModes) {
+            recordCompletedSession(done.mode, done.duration);
+          }
+          if (statusDisplay) {
+            statusDisplay.textContent = "Session Complete!";
+            if (statusTimeout) clearTimeout(statusTimeout);
+            statusTimeout = setTimeout(() => {
+              statusTimeout = null;
+              if (statusDisplay) {
+                statusDisplay.textContent = defaultStatusText(activeMode);
+              }
+            }, 5000);
+          }
+        }
+
+        updateDisplay();
+        ensureMasterLoop();
+      }, 1000);
+    } else if (!anyRunning && masterInterval) {
+      clearInterval(masterInterval);
+      masterInterval = null;
+    }
+  }
+
+  function toggleActiveTimer() {
+    const current = timerStates[activeMode];
+    if (statusTimeout) {
+      clearTimeout(statusTimeout);
+      statusTimeout = null;
+    }
+
+    if (current.isRunning) {
+      timerStates = pauseModeTimer(timerStates, activeMode);
+      if (activeMode === "pomodoro") {
+        document.dispatchEvent(new CustomEvent("study-session-pause"));
+      }
+    } else {
+      timerStates = startModeTimer(timerStates, activeMode);
+      if (activeMode === "pomodoro") {
+        document.dispatchEvent(new CustomEvent("study-session-start", { detail: { mode: activeMode } }));
+      }
+    }
+
+    updateDisplay();
+    ensureMasterLoop();
+  }
+
+  function resetActiveTimer() {
+    if (statusTimeout) {
+      clearTimeout(statusTimeout);
+      statusTimeout = null;
+    }
+    const wasRunning = timerStates[activeMode].isRunning;
+    timerStates = resetModeTimer(timerStates, activeMode);
+    if (wasRunning && activeMode === "pomodoro") {
       document.dispatchEvent(new CustomEvent("study-session-pause"));
     }
-  }
-
-  function resetTimer() {
-    pauseTimer();
-    timeLeft         = totalTime;
-    sessionStartTime = null;
     updateDisplay();
+    ensureMasterLoop();
   }
 
-  startBtn?.addEventListener("click", () => isRunning ? pauseTimer() : startTimer());
-  resetBtn?.addEventListener("click", resetTimer);
+  startBtn?.addEventListener("click", toggleActiveTimer);
+  resetBtn?.addEventListener("click", resetActiveTimer);
 
-  modeButtons.forEach(btn => {
+  modeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      modeButtons.forEach(b => {
-        b.classList.remove("bg-primary", "text-white");
-        b.classList.add("text-ink-subtle");
-      });
-      btn.classList.add("bg-primary", "text-white");
-      btn.classList.remove("text-ink-subtle");
-      const timeValue = parseInt(btn.getAttribute("data-time") || "1500");
-      totalTime    = timeValue;
-      timeLeft     = timeValue;
-      currentMode  = (btn.id === "mode-pomodoro" ? "pomodoro" : btn.id === "mode-short" ? "short" : "long") as TimerMode;
-      if (statusDisplay) statusDisplay.textContent = currentMode === "pomodoro" ? "Focusing" : "Relaxing";
-      resetTimer();
+      const nextMode = (btn.dataset.mode || "pomodoro") as TimerMode;
+      if (statusTimeout) {
+        clearTimeout(statusTimeout);
+        statusTimeout = null;
+      }
+      activeMode = nextMode;
+      updateDisplay();
     });
   });
 
