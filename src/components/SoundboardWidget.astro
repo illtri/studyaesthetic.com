@@ -1,14 +1,8 @@
 ---
-// e:/ARUNAV WORKS/studyaesthetic.com/src/components/SoundboardWidget.astro
+import { getSoundsFromDb } from '../utils/MediaDatabase';
 
-const ambientSounds = [
-  { id: "lofi",     name: "Lofi Beats",      icon: "🎵", url: "/sounds/lofi.mp3" },
-  { id: "rain",     name: "Rainfall",         icon: "🌧️", url: "/sounds/rain.mp3" },
-  { id: "keyboard", name: "Mechanical Keys",  icon: "⌨️", url: "/sounds/keyboard.mp3" },
-  { id: "cafe",     name: "Cafe Vibe",        icon: "☕", url: "/sounds/cafe.mp3" },
-  { id: "campfire", name: "Campfire",         icon: "🔥", url: "/sounds/campfire.mp3" },
-  { id: "birds",    name: "Forest Birds",     icon: "🐦", url: "/sounds/birds.mp3" }
-];
+const ambientSounds = await getSoundsFromDb();
+const soundCategories = ['All', 'Music', 'Nature', 'Ambience', 'Focus'] as const;
 ---
 
 <div
@@ -26,6 +20,7 @@ const ambientSounds = [
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
       </svg>
       <span class="text-xs font-semibold uppercase tracking-wider font-sans">Ambient Mixer</span>
+      <span class="text-[10px] font-mono text-ink-tertiary ml-1">({ambientSounds.length})</span>
     </div>
     <button class="minimize-btn text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer" aria-label="Minimize sounds widget">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -35,21 +30,41 @@ const ambientSounds = [
   </div>
 
   <!-- Body -->
-  <div class="widget-body px-4 pb-4 pt-4 flex flex-col">
+  <div class="widget-body px-4 pb-4 pt-3.5 flex flex-col">
     <!-- Quick Presets -->
-    <div class="grid grid-cols-4 gap-1.5 mb-4">
+    <div class="grid grid-cols-3 gap-1.5 mb-2.5">
       <button id="preset-study" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Study</button>
       <button id="preset-rain"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Rainy</button>
       <button id="preset-cafe"  class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Cafe</button>
+      <button id="preset-piano" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Piano</button>
+      <button id="preset-ocean" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Ocean</button>
       <button id="preset-reset" class="text-[10px] font-semibold py-1.5 rounded bg-surface-2 text-ink-subtle hover:text-ink hover:bg-surface-3 transition cursor-pointer">Clear</button>
     </div>
 
-    <!-- Sound Sliders -->
-    <div class="space-y-3 mb-4">
+    <!-- Category filter -->
+    <div class="flex gap-1 overflow-x-auto pb-2 mb-2 border-b border-hairline/60 whitespace-nowrap" style="scrollbar-width:none;">
+      {soundCategories.map((cat, idx) => (
+        <button
+          type="button"
+          class={`sound-cat-tab px-2.5 py-1 rounded-full text-[10px] font-medium cursor-pointer transition shrink-0 ${idx === 0 ? "bg-primary text-white" : "bg-surface-2 text-ink-subtle hover:text-ink"}`}
+          data-sound-category={cat}
+        >
+          {cat}
+        </button>
+      ))}
+    </div>
+
+    <!-- Sound Sliders (scrollable compact list) -->
+    <div id="sound-sliders-list" class="space-y-2.5 mb-3 max-h-[268px] overflow-y-auto pr-1">
       {ambientSounds.map(sound => (
-        <div class="flex items-center gap-3 bg-surface-2/30 border border-hairline/50 p-2 rounded-lg" data-sound-id={sound.id}>
-          <audio id={`audio-${sound.id}`} src={sound.url} loop preload="auto"></audio>
+        <div
+          class="sound-row flex items-center gap-3 bg-surface-2/30 border border-hairline/50 p-2 rounded-lg"
+          data-sound-id={sound.id}
+          data-sound-category={sound.category}
+        >
+          <audio id={`audio-${sound.id}`} src={sound.url} loop preload="none"></audio>
           <button
+            type="button"
             class="sound-toggle-btn w-8 h-8 rounded-md bg-surface-2 hover:bg-surface-3 flex items-center justify-center text-sm transition cursor-pointer shrink-0"
             data-sound-id={sound.id}
             aria-label={`Toggle ${sound.name}`}
@@ -57,7 +72,7 @@ const ambientSounds = [
             {sound.icon}
           </button>
           <div class="flex-1 flex flex-col min-w-0">
-            <div class="flex justify-between items-center mb-1">
+            <div class="flex justify-between items-center mb-1 gap-2">
               <span class="text-xs font-medium text-ink-muted truncate">{sound.name}</span>
               <span class="sound-value-label text-[10px] font-mono text-ink-subtle shrink-0">0%</span>
             </div>
@@ -80,6 +95,7 @@ const ambientSounds = [
         </svg>
         <span id="mute-text">Mute All</span>
       </button>
+      <span class="text-[10px] font-mono text-ink-tertiary">Royalty-Free</span>
       <button id="soundboard-stop" class="text-xs font-semibold text-ink-subtle hover:text-ink transition cursor-pointer">Stop All</button>
     </div>
   </div>
@@ -107,6 +123,8 @@ const ambientSounds = [
 
   const soundSliders = document.querySelectorAll(".sound-slider") as NodeListOf<HTMLInputElement>;
   const toggleBtns   = document.querySelectorAll(".sound-toggle-btn") as NodeListOf<HTMLButtonElement>;
+  const catTabs      = document.querySelectorAll<HTMLButtonElement>(".sound-cat-tab");
+  const soundRows    = document.querySelectorAll<HTMLElement>(".sound-row");
   const muteBtn  = document.getElementById("soundboard-mute");
   const muteText = document.getElementById("mute-text");
   const muteIcon = document.getElementById("mute-icon");
@@ -122,6 +140,22 @@ const ambientSounds = [
       audio.volume = 0;
       audioStates[id] = { audio, isPlaying: false, volume: 0 };
     }
+  });
+
+  catTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      catTabs.forEach(t => {
+        t.classList.remove("bg-primary", "text-white");
+        t.classList.add("bg-surface-2", "text-ink-subtle");
+      });
+      tab.classList.add("bg-primary", "text-white");
+      tab.classList.remove("bg-surface-2", "text-ink-subtle");
+      const cat = tab.getAttribute("data-sound-category") || "All";
+      soundRows.forEach(row => {
+        const rowCat = row.getAttribute("data-sound-category") || "";
+        row.classList.toggle("hidden", cat !== "All" && rowCat !== cat);
+      });
+    });
   });
 
   soundSliders.forEach(slider => {
@@ -188,13 +222,15 @@ const ambientSounds = [
 
   stopBtn?.addEventListener("click", () => Object.keys(audioStates).forEach(id => updateSound(id, 0)));
 
-  document.getElementById("preset-study")?.addEventListener("click", () => stopAllAndApply({ lofi: 40, keyboard: 50 }));
-  document.getElementById("preset-rain")?.addEventListener("click", () => stopAllAndApply({ rain: 60, lofi: 20 }));
+  document.getElementById("preset-study")?.addEventListener("click", () => stopAllAndApply({ lofi: 40, keyboard: 50, "brown-noise": 15 }));
+  document.getElementById("preset-rain")?.addEventListener("click", () => stopAllAndApply({ rain: 60, thunder: 30, lofi: 20 }));
   document.getElementById("preset-cafe")?.addEventListener("click", () => stopAllAndApply({ cafe: 60, keyboard: 20, lofi: 10 }));
+  document.getElementById("preset-piano")?.addEventListener("click", () => stopAllAndApply({ piano: 65, rain: 25 }));
+  document.getElementById("preset-ocean")?.addEventListener("click", () => stopAllAndApply({ ocean: 65, wind: 30 }));
   document.getElementById("preset-reset")?.addEventListener("click", () => Object.keys(audioStates).forEach(id => updateSound(id, 0)));
 
   document.addEventListener("change-space", (e: any) => {
-    const presets = e.detail.presets;
+    const presets = e.detail?.presets;
     if (presets) stopAllAndApply(presets);
   });
 </script>

@@ -9,13 +9,21 @@ import NotesWidget from '../components/NotesWidget.astro';
 import BreathingWidget from '../components/BreathingWidget.astro';
 import StatsWidget from '../components/StatsWidget.astro';
 import LoginModal from '../components/LoginModal.astro';
+import { getSpaceVideosFromDb } from '../utils/MediaDatabase';
+
+const spaces = await getSpaceVideosFromDb();
+const defaultSpace = spaces[0] ?? {
+  id: 'lofi-cafe',
+  title: 'Lo-Fi Cafe Vibes',
+  contentUrl: '/videos/lofi-cafe.mp4',
+  thumbnailUrl: '/videos/thumbs/lofi-cafe.jpg',
+};
 ---
 
 <Layout>
   <!-- ══════════════════════════════════════════════════════════
        BACKGROUND LAYER — z-index 0
-       Animated CSS gradient shown immediately, YouTube loads
-       on first user gesture to satisfy autoplay policy.
+       Instant-start local MP4 loop backed by MediaDatabase.
        ════════════════════════════════════════════════════════ -->
   <div id="bg-wrapper" class="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none animated-bg-fallback">
 
@@ -23,7 +31,7 @@ import LoginModal from '../components/LoginModal.astro';
     <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/75 z-10 pointer-events-none"></div>
     <div class="absolute inset-0 bg-black/10 z-10 pointer-events-none"></div>
 
-    <!-- Video loading spinner (shown while iframe loads) -->
+    <!-- Video loading spinner (only visible while remote custom video buffers) -->
     <div id="video-loading-overlay" class="hidden">
       <div class="flex flex-col items-center gap-3">
         <div class="video-spinner"></div>
@@ -31,28 +39,24 @@ import LoginModal from '../components/LoginModal.astro';
       </div>
     </div>
 
-    <!-- Click-to-start overlay — satisfies browser autoplay policy -->
-    <div id="video-start-overlay">
-      <div class="flex flex-col items-center gap-4 text-center px-8">
-        <div class="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-sm">
-          <svg class="w-7 h-7 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-        </div>
-        <div>
-          <p class="font-sans font-semibold text-ink text-base tracking-tight">Click to start your study space</p>
-          <p class="text-xs text-ink-subtle mt-1 font-sans">Background video + ambient sounds will play</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- YouTube Background Iframe (injected dynamically after gesture) -->
+    <!-- Direct Database Video Layer (starts immediately, zero YouTube wait) -->
     <div
       id="bg-player-wrap"
-      class="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2 scale-[1.06]"
+      class="absolute inset-0 w-full h-full"
       aria-hidden="true"
     >
-      <!-- iframe injected by JS after user gesture -->
+      <video
+        id="bg-video"
+        src={defaultSpace.contentUrl}
+        poster={defaultSpace.thumbnailUrl}
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        class="w-full h-full object-cover pointer-events-none select-none"
+        aria-hidden="true"
+      ></video>
     </div>
   </div>
 
@@ -73,9 +77,9 @@ import LoginModal from '../components/LoginModal.astro';
 
       <!-- Current Space -->
       <div class="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[11px] font-medium text-ink-muted">
-        <span id="space-live-dot" class="w-1.5 h-1.5 rounded-full bg-surface-3" aria-hidden="true"></span>
+        <span id="space-live-dot" class="w-1.5 h-1.5 rounded-full bg-semantic-success" aria-hidden="true"></span>
         <span>Space: </span>
-        <span id="current-space-title" class="text-ink font-semibold">—</span>
+        <span id="current-space-title" class="text-ink font-semibold">{defaultSpace.title}</span>
       </div>
 
       <!-- Clock, Cloud Sync, & Options -->
@@ -708,22 +712,24 @@ import LoginModal from '../components/LoginModal.astro';
   exitFocusBtn?.addEventListener("click", exitFocus);
 
   // ════════════════════════════════════════════════════════════════
-  // VIDEO SYSTEM — Fixed autoplay + fallback
+  // INSTANT DATABASE VIDEO SYSTEM — Zero YouTube wait
   // ════════════════════════════════════════════════════════════════
-  // YouTube iframes with autoplay=1 are blocked by Chrome's autoplay
-  // policy unless the page has received a user gesture first.
-  // Fix: defer iframe injection until first click on the start overlay.
-  // Show an animated CSS gradient background as fallback during load.
-  // ════════════════════════════════════════════════════════════════
+  import {
+    getActiveVideos,
+    getCachedVideoUrl,
+    getVideo,
+    syncVideosFromServer,
+    warmVideoCache,
+  } from '../utils/VideoDatabase';
 
-  let currentVideoId = "5yx6BWlEVcY"; // Default: Lo-Fi Cafe
+  let currentSpaceId = "lofi-cafe";
   let currentSpaceTitle = "Lo-Fi Cafe Vibes";
-  let isVideoPlaying = false;
-  let playerIframe: HTMLIFrameElement | null = null;
+  let isVideoPlaying = true;
+  let activeBlobUrl: string | null = null;
 
-  const startOverlay   = document.getElementById("video-start-overlay");
   const loadingOverlay = document.getElementById("video-loading-overlay");
   const playerWrap     = document.getElementById("bg-player-wrap");
+  const bgWrapper      = document.getElementById("bg-wrapper");
   const spaceTitleEl   = document.getElementById("current-space-title");
   const spaceLiveDot   = document.getElementById("space-live-dot");
   const videoPlayBtn   = document.getElementById("dock-btn-video-play");
@@ -732,151 +738,132 @@ import LoginModal from '../components/LoginModal.astro';
   const PAUSE_SVG = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
   const PLAY_SVG  = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
 
-  function buildYouTubeUrl(videoId: string): string {
-    const origin = encodeURIComponent(window.location.origin);
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&showinfo=0&rel=0&iv_load_policy=3&playsinline=1&modestbranding=1&origin=${origin}`;
+  function getOrCreateBgVideo(): HTMLVideoElement | null {
+    if (!playerWrap) return null;
+    let vid = document.getElementById("bg-video") as HTMLVideoElement | null;
+    if (!vid) {
+      playerWrap.innerHTML = "";
+      vid = document.createElement("video");
+      vid.id = "bg-video";
+      vid.autoplay = true;
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.preload = "auto";
+      vid.className = "w-full h-full object-cover pointer-events-none select-none";
+      vid.setAttribute("aria-hidden", "true");
+      playerWrap.appendChild(vid);
+    }
+    return vid;
   }
 
-  function injectPlayer(videoId: string) {
-    if (!playerWrap) return;
+  async function playLocalVideo(url: string, title?: string, id?: string) {
+    if (bgWrapper) {
+      bgWrapper.style.backgroundImage = "";
+      bgWrapper.classList.add("animated-bg-fallback");
+    }
+    if (playerWrap) playerWrap.style.display = "";
 
-    // Show loading state
-    loadingOverlay?.classList.remove("hidden");
+    const vid = getOrCreateBgVideo();
+    if (!vid) return;
 
-    // Remove any existing video/iframe elements
-    playerWrap.innerHTML = "";
+    const isRemote = !url.startsWith("/") && !url.startsWith("blob:");
+    if (isRemote) loadingOverlay?.classList.remove("hidden");
 
-    const iframe = document.createElement("iframe");
-    iframe.id          = "bg-player";
-    iframe.src         = buildYouTubeUrl(videoId);
-    iframe.frameBorder = "0";
-    iframe.allow       = "autoplay; encrypted-media";
-    iframe.className   = "w-full h-full pointer-events-none select-none";
-    iframe.setAttribute("aria-hidden", "true");
+    const resolvedUrl = await getCachedVideoUrl(url);
+    if (activeBlobUrl && activeBlobUrl !== resolvedUrl && activeBlobUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(activeBlobUrl);
+    }
+    if (resolvedUrl.startsWith("blob:")) activeBlobUrl = resolvedUrl;
 
-    iframe.addEventListener("load", () => {
-      // Hide loading overlay after iframe loads
-      setTimeout(() => {
-        loadingOverlay?.classList.add("hidden");
-      }, 800);
-    });
+    if (vid.src !== resolvedUrl) {
+      vid.src = resolvedUrl;
+    }
+    vid.muted = true;
+    vid.loop = true;
+    vid.playsInline = true;
 
-    playerWrap.appendChild(iframe);
-    playerIframe = iframe;
+    const finishLoading = () => loadingOverlay?.classList.add("hidden");
+    vid.addEventListener("canplay", finishLoading, { once: true });
+    vid.addEventListener("error", finishLoading, { once: true });
+
+    vid.play().then(finishLoading).catch(finishLoading);
     isVideoPlaying = true;
 
-    if (spaceLiveDot) {
-      spaceLiveDot.classList.remove("bg-surface-3");
-      spaceLiveDot.classList.add("bg-semantic-success", "animate-ping");
+    if (id) currentSpaceId = id;
+    if (title) {
+      currentSpaceTitle = title;
+      if (spaceTitleEl) spaceTitleEl.textContent = title;
     }
-  }
-
-  function controlYT(action: string) {
-    if (!playerIframe) return;
-    try {
-      playerIframe.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func: action, args: [] }),
-        "*"
-      );
-    } catch {}
-  }
-
-  // Start overlay click — first user gesture satisfies autoplay policy
-  startOverlay?.addEventListener("click", () => {
-    startOverlay.classList.add("hidden");
-    if (spaceTitleEl) spaceTitleEl.textContent = currentSpaceTitle;
-    injectPlayer(currentVideoId);
+    if (spaceLiveDot) {
+      spaceLiveDot.classList.remove("bg-surface-3", "bg-primary");
+      spaceLiveDot.classList.add("bg-semantic-success");
+    }
     if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
-  });
+  }
+
+  // Ensure initial SSR video plays immediately
+  const initialVideo = document.getElementById("bg-video") as HTMLVideoElement | null;
+  if (initialVideo) {
+    initialVideo.muted = true;
+    initialVideo.play().catch(() => {});
+  }
 
   // Video play/pause toggle
   videoPlayBtn?.addEventListener("click", () => {
-    if (!playerIframe) {
-      // Player not yet started — trigger start
-      startOverlay?.classList.add("hidden");
-      if (spaceTitleEl) spaceTitleEl.textContent = currentSpaceTitle;
-      injectPlayer(currentVideoId);
-      return;
+    const vid = getOrCreateBgVideo();
+    if (!vid) return;
+    if (vid.paused) {
+      vid.play().catch(() => {});
+      isVideoPlaying = true;
+    } else {
+      vid.pause();
+      isVideoPlaying = false;
     }
-    isVideoPlaying = !isVideoPlaying;
-    controlYT(isVideoPlaying ? "playVideo" : "pauseVideo");
     if (playVideoIcon) playVideoIcon.innerHTML = isVideoPlaying ? PAUSE_SVG : PLAY_SVG;
   });
 
   // Space change event (from SpacesDrawer)
   document.addEventListener("change-space", (e: any) => {
-    const { videoId, title } = e.detail;
-    currentVideoId = videoId;
-    if (title) currentSpaceTitle = title;
+    const { id, contentUrl, videoId, title } = e.detail || {};
+    const targetUrl = contentUrl || (videoId ? `/videos/${id || "lofi-cafe"}.mp4` : "");
+    if (!targetUrl) return;
+    playLocalVideo(targetUrl, title, id);
 
-    if (bgWrapper) {
-      bgWrapper.style.backgroundImage = "";
-      bgWrapper.classList.add("animated-bg-fallback");
-    }
-    if (playerIframe) {
-      playerIframe.style.display = "";
-    }
-
-    if (spaceTitleEl && title) spaceTitleEl.textContent = title;
-
-    if (playerIframe) {
-      // Player is running — switch video
-      injectPlayer(videoId);
-    } else {
-      // Player not yet started — update default and start if overlay is hidden
-      if (startOverlay?.classList.contains("hidden")) {
-        injectPlayer(videoId);
-      }
-    }
-
-    if (playVideoIcon) playVideoIcon.innerHTML = PAUSE_SVG;
-    isVideoPlaying = true;
+    try {
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      prefs.selectedBackground     = id;
+      prefs.selectedBackgroundType = "direct_video";
+      localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
+    } catch {}
   });
 
-  // ── Background image handler (from static library) ─────────────
-  const bgWrapper = document.getElementById("bg-wrapper");
-
+  // Background image or custom video handler
   document.addEventListener("change-background", (e: any) => {
-    const { type, url, title, id } = e.detail;
+    const { type, url, title, id } = e.detail || {};
 
     if (type === "image") {
-      // Static image background — hide YouTube player, show image
-      if (playerIframe) {
-        playerIframe.style.display = "none";
-      }
+      const vid = document.getElementById("bg-video") as HTMLVideoElement | null;
+      if (vid) vid.pause();
+      if (playerWrap) playerWrap.style.display = "none";
+
       if (bgWrapper) {
         bgWrapper.style.backgroundImage = `url('${url}')`;
         bgWrapper.style.backgroundSize  = "cover";
         bgWrapper.style.backgroundPosition = "center";
         bgWrapper.classList.remove("animated-bg-fallback");
       }
-      if (spaceTitleEl) spaceTitleEl.textContent = title;
+      if (spaceTitleEl && title) spaceTitleEl.textContent = title;
       if (spaceLiveDot) {
-        spaceLiveDot.classList.remove("bg-semantic-success", "animate-ping");
+        spaceLiveDot.classList.remove("bg-semantic-success");
         spaceLiveDot.classList.add("bg-primary");
       }
-      // Dismiss start overlay if present
-      startOverlay?.classList.add("hidden");
-    } else if (type === "video") {
-      // Custom uploaded video
-      playerIframe = null;
-      if (bgWrapper) bgWrapper.style.backgroundImage = "";
-      if (playerWrap) {
-        const vid = document.createElement("video");
-        vid.src       = url;
-        vid.autoplay  = true;
-        vid.loop      = true;
-        vid.muted     = true;
-        vid.className = "w-full h-full object-cover pointer-events-none";
-        playerWrap.innerHTML = "";
-        playerWrap.appendChild(vid);
-      }
-      if (title) currentSpaceTitle = title;
-      if (spaceTitleEl) spaceTitleEl.textContent = title;
-      startOverlay?.classList.add("hidden");
+      isVideoPlaying = false;
+      if (playVideoIcon) playVideoIcon.innerHTML = PLAY_SVG;
+    } else if (type === "video" || type === "direct_video") {
+      playLocalVideo(url, title, id);
     }
 
-    // Save preference
     try {
       const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
       prefs.selectedBackground     = id;
@@ -884,6 +871,35 @@ import LoginModal from '../components/LoginModal.astro';
       localStorage.setItem("sa_user_prefs_v1", JSON.stringify(prefs));
     } catch {}
   });
+
+  function restoreSavedSpace() {
+    try {
+      const prefs = JSON.parse(localStorage.getItem("sa_user_prefs_v1") || "{}");
+      const savedId = prefs.selectedBackground;
+      if (!savedId || savedId === currentSpaceId) return;
+      const entry = getVideo(savedId);
+      if (!entry) return;
+      if (entry.contentType === "image") {
+        document.dispatchEvent(new CustomEvent("change-background", {
+          detail: { type: "image", url: entry.contentUrl, title: entry.title, id: entry.id }
+        }));
+      } else if (entry.contentType === "direct_video") {
+        playLocalVideo(entry.contentUrl, entry.title, entry.id);
+      }
+    } catch {}
+  }
+
+  // Pre-warm remaining space MP4s into Cache Storage after idle so space switching is 0ms
+  syncVideosFromServer().then((videos) => {
+    const urls = videos
+      .filter((v) => v.contentType === "direct_video" && v.contentUrl.startsWith("/videos/"))
+      .map((v) => v.contentUrl);
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(() => warmVideoCache(urls.slice(0, 6)));
+    } else {
+      setTimeout(() => warmVideoCache(urls.slice(0, 6)), 1200);
+    }
+  }).catch(() => {});
 
   // ── Initialize UserStore on boot ────────────────────────────────
   function initUserStore() {
@@ -1011,6 +1027,7 @@ import LoginModal from '../components/LoginModal.astro';
     initUserStore();
     syncAuthUI();
     initWidgets();
+    restoreSavedSpace();
     document.querySelectorAll<HTMLElement>(".widget-island").forEach(makeDraggable);
     setupDockToggles();
   }

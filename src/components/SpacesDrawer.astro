@@ -1,35 +1,11 @@
 ---
-// e:/ARUNAV WORKS/studyaesthetic.com/src/components/SpacesDrawer.astro
+import {
+  getSpaceVideosFromDb,
+  getStaticBackgroundsFromDb,
+} from '../utils/MediaDatabase';
 
-const spaces = [
-  { id: "lofi-cafe",     title: "Lo-Fi Cafe Vibes",           category: "Cafes",          videoId: "5yx6BWlEVcY", isTrending: true,  isNew: false, activeUsers: "4.8k", presetSounds: { lofi: 60, cafe: 40, rain: 20 } },
-  { id: "tokyo-rain",    title: "Cozy Tokyo Rain Cafe",        category: "City & Travel",  videoId: "e3L1PIY1pN8", isTrending: true,  isNew: false, activeUsers: "3.2k", presetSounds: { rain: 70, keyboard: 30, lofi: 20 } },
-  { id: "cozy-library",  title: "Aesthetic Hogwarts Library",  category: "Cozy Rooms",     videoId: "4vIQON2fDWM", isTrending: true,  isNew: false, activeUsers: "2.1k", presetSounds: { keyboard: 40, lofi: 10 } },
-  { id: "rainy-window",  title: "Windowpane Autumn Rain",      category: "Nature & Rain",  videoId: "mPZkdNFkNps", isTrending: false, isNew: true,  activeUsers: "1.5k", presetSounds: { rain: 80, lofi: 20 } },
-  { id: "anime-study",   title: "Anime Girl Bedroom Workspace",category: "Cozy Rooms",     videoId: "lTRiuFIWV54", isTrending: false, isNew: true,  activeUsers: "5.4k", presetSounds: { lofi: 80 } },
-  { id: "winter-train",  title: "Swiss Winter Express Train",  category: "City & Travel",  videoId: "n61ULEU7CO0", isTrending: false, isNew: true,  activeUsers: "920",  presetSounds: { lofi: 50, keyboard: 30 } },
-  { id: "forest-cabin",  title: "Rainy Cabin Fireplace",       category: "Nature & Rain",  videoId: "yIQd2Ya0Ziw", isTrending: true,  isNew: false, activeUsers: "2.9k", presetSounds: { campfire: 70, rain: 40, birds: 20 } },
-  { id: "observatory",   title: "Night Sky Observatory",       category: "Nature & Rain",  videoId: "q76bMs-NwRk", isTrending: false, isNew: false, activeUsers: "640",  presetSounds: { lofi: 40 } },
-  { id: "cyberpunk-apt", title: "Cyberpunk Rain Apartment",    category: "Cozy Rooms",     videoId: "4xDzrJKXOOY", isTrending: true,  isNew: false, activeUsers: "3.7k", presetSounds: { lofi: 50, rain: 40 } },
-  { id: "zen-garden",    title: "Zen Rain Garden & Koi Pond",  category: "Nature & Rain",  videoId: "DWcJFNfaw9c", isTrending: false, isNew: false, activeUsers: "1.1k", presetSounds: { birds: 50, rain: 30 } },
-  { id: "starbucks-rain",title: "Rainy Coffee Shop Front",     category: "Cafes",          videoId: "7NOSDKb0HlU", isTrending: false, isNew: false, activeUsers: "2.5k", presetSounds: { cafe: 60, rain: 40 } },
-  { id: "aurora-camp",   title: "Aurora Camping Fire",         category: "Nature & Rain",  videoId: "TURbeWK2wwg", isTrending: false, isNew: true,  activeUsers: "880",  presetSounds: { campfire: 80, birds: 10 } },
-];
-
-const staticBgs = [
-  { id: "static-minimal-dark",    title: "Minimal Dark",       category: "Minimal",     url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&q=80" },
-  { id: "static-library-books",   title: "Warm Library",       category: "Aesthetic",   url: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&q=80" },
-  { id: "static-forest",          title: "Misty Forest",       category: "Nature",      url: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80" },
-  { id: "static-ocean",           title: "Ocean Sunset",       category: "Nature",      url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80" },
-  { id: "static-abstract-purple", title: "Purple Nebula",      category: "Abstract",    url: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&q=80" },
-  { id: "static-dark-desk",       title: "Dark Desk Setup",    category: "Dark Mode",   url: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80" },
-  { id: "static-mountains",       title: "Snowy Mountains",    category: "Nature",      url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80" },
-  { id: "static-neon-city",       title: "Neon City Night",    category: "Aesthetic",   url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80" },
-  { id: "static-sakura",          title: "Cherry Blossoms",    category: "Aesthetic",   url: "https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=400&q=80" },
-  { id: "static-space",           title: "Deep Space",         category: "Abstract",    url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80" },
-  { id: "static-coffee-table",    title: "Aesthetic Coffee",   category: "Minimal",     url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80" },
-  { id: "static-dark-gradient",   title: "Ink Dark Gradient",  category: "Dark Mode",   url: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=90", thumb: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&q=80" },
-];
+const spaces = await getSpaceVideosFromDb();
+const staticBgs = await getStaticBackgroundsFromDb();
 
 const spaceCategories = ["All Spaces", "Trending", "New Spaces", "Cozy Rooms", "Cafes", "Nature & Rain", "City & Travel"];
 const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "Abstract"];
@@ -39,7 +15,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
      SPACES & BACKGROUND LIBRARY DRAWER
      Three tabs: Video Spaces | Static Backgrounds | My Uploads
      ═══════════════════════════════════════════════════════════ -->
-<div id="spaces-drawer" class="fixed top-0 left-0 h-full w-[400px] z-[110] glass -translate-x-full transition-transform duration-300 ease-out flex flex-col edge-highlight">
+<div id="spaces-drawer" class="fixed top-0 left-0 h-full w-[400px] max-w-[92vw] z-[110] glass -translate-x-full transition-transform duration-300 ease-out flex flex-col edge-highlight">
 
   <!-- ── Header ─────────────────────────────────────── -->
   <div class="flex items-center justify-between p-5 border-b border-hairline shrink-0">
@@ -59,20 +35,20 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   <!-- ── Main Tabs ───────────────────────────────────── -->
   <div class="flex gap-0 px-4 pt-3 border-b border-hairline shrink-0">
     <button id="drawer-tab-spaces" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-primary text-ink cursor-pointer transition" aria-selected="true">
-      🎬 Video Spaces
+      Video Spaces
     </button>
     <button id="drawer-tab-backgrounds" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition" aria-selected="false">
-      🖼️ Static Backgrounds
+      Static Backgrounds
     </button>
     <button id="drawer-tab-uploads" class="drawer-tab flex-1 pb-2.5 text-xs font-semibold border-b-2 border-transparent text-ink-subtle hover:text-ink cursor-pointer transition" aria-selected="false">
-      ⬆️ My Uploads
+      My Uploads
     </button>
   </div>
 
   <!-- ════════════════════════════════════════
-       TAB 1: VIDEO SPACES
+       TAB 1: VIDEO SPACES (Instant Local MP4 DB)
        ════════════════════════════════════════ -->
-  <div id="drawer-panel-spaces" class="drawer-panel flex flex-col flex-1 min-h-0" style="">
+  <div id="drawer-panel-spaces" class="drawer-panel flex flex-col flex-1 min-h-0">
 
     <!-- Search -->
     <div class="p-4 border-b border-hairline/60 shrink-0">
@@ -98,40 +74,49 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
     <!-- Space cards -->
     <div id="spaces-list-container" class="flex-1 overflow-y-auto p-3 space-y-3">
-      {spaces.map(space => (
+      {spaces.map((space, idx) => (
         <div
-          class="space-card bg-surface-1/90 border border-hairline hover:border-hairline-strong hover:bg-surface-2/90 transition duration-200 rounded-lg overflow-hidden cursor-pointer flex flex-col relative group"
+          class={`space-card bg-surface-1/90 border hover:border-hairline-strong hover:bg-surface-2/90 transition duration-200 rounded-lg overflow-hidden flex flex-col relative group ${idx === 0 ? "border-primary/50" : "border-hairline"}`}
           data-id={space.id}
-          data-video-id={space.videoId}
+          data-content-url={space.contentUrl}
+          data-content-type={space.contentType}
           data-title={space.title}
-          data-presets={JSON.stringify(space.presetSounds)}
+          data-presets={JSON.stringify(space.presetSounds || {})}
           data-category={space.category}
           data-trending={space.isTrending ? "true" : "false"}
           data-new={space.isNew ? "true" : "false"}
         >
-          <!-- Thumbnail -->
-          <div class="relative h-[108px] w-full bg-canvas/80 overflow-hidden">
-            <img src={`https://img.youtube.com/vi/${space.videoId}/mqdefault.jpg`} alt={space.title}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"
-              onerror="this.style.opacity='0'"/>
-            <!-- Badges -->
-            <div class="absolute top-2 left-2 flex gap-1">
-              {space.isTrending && <span class="bg-primary/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">Trending</span>}
-              {space.isNew      && <span class="bg-semantic-success/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">New</span>}
+          <button
+            type="button"
+            class="space-select-btn w-full text-left cursor-pointer focus:outline-none"
+            aria-label={`Select space ${space.title}`}
+          >
+            <!-- Thumbnail -->
+            <div class="relative h-[108px] w-full bg-canvas/80 overflow-hidden">
+              <img src={space.thumbnailUrl} alt={space.title} referrerpolicy="no-referrer"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"/>
+              <!-- Badges -->
+              <div class="absolute top-2 left-2 flex gap-1">
+                {space.isTrending && <span class="bg-primary/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">Trending</span>}
+                {space.isNew      && <span class="bg-semantic-success/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">New</span>}
+                <span class="bg-black/75 text-ink-muted text-[10px] font-mono px-2 py-0.5 rounded-sm">Instant</span>
+              </div>
+              <!-- Active users -->
+              {space.activeUsers && (
+                <div class="absolute bottom-2 right-2 bg-black/75 px-2 py-0.5 rounded-sm flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 bg-semantic-success rounded-full" aria-hidden="true"></span>
+                  <span class="text-[10px] text-ink font-mono">{space.activeUsers} here</span>
+                </div>
+              )}
             </div>
-            <!-- Active users -->
-            <div class="absolute bottom-2 right-2 bg-black/75 px-2 py-0.5 rounded-sm flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 bg-semantic-success rounded-full animate-ping" aria-hidden="true"></span>
-              <span class="text-[10px] text-ink font-mono">{space.activeUsers} here</span>
+            <!-- Info -->
+            <div class="p-3">
+              <span class="text-[11px] text-primary font-medium uppercase tracking-wider">{space.category}</span>
+              <h3 class="font-sans font-semibold text-sm text-ink mt-0.5 group-hover:text-primary-hover transition-colors leading-snug">{space.title}</h3>
             </div>
-            <!-- Favorite star -->
-            <button class="fav-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[11px] hover:bg-black/80 transition cursor-pointer" data-id={space.id} aria-label="Toggle favorite">⭐</button>
-          </div>
-          <!-- Info -->
-          <div class="p-3">
-            <span class="text-[11px] text-primary font-medium uppercase tracking-wider">{space.category}</span>
-            <h3 class="font-sans font-semibold text-sm text-ink mt-0.5 group-hover:text-primary-hover transition-colors leading-snug">{space.title}</h3>
-          </div>
+          </button>
+          <!-- Favorite star (sibling button, not nested) -->
+          <button type="button" class="fav-btn absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center text-[11px] hover:bg-black/80 transition cursor-pointer z-10" data-id={space.id} aria-label={`Favorite ${space.title}`}>☆</button>
         </div>
       ))}
     </div>
@@ -154,18 +139,19 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     <!-- Backgrounds grid -->
     <div id="bg-grid" class="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2.5 content-start">
       {staticBgs.map(bg => (
-        <div
-          class="bg-library-card border border-hairline rounded-lg overflow-hidden cursor-pointer relative group"
+        <button
+          type="button"
+          class="bg-library-card border border-hairline rounded-lg overflow-hidden cursor-pointer relative group text-left"
           data-bg-id={bg.id}
-          data-bg-url={bg.url}
+          data-bg-url={bg.contentUrl}
           data-bg-title={bg.title}
           data-bg-category={bg.category}
           data-bg-type="image"
+          aria-label={`Apply background ${bg.title}`}
         >
           <div class="relative h-24 overflow-hidden">
-            <img src={bg.thumb} alt={bg.title}
+            <img src={bg.thumbnailUrl} alt={bg.title} referrerpolicy="no-referrer"
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none" loading="lazy"/>
-            <!-- Overlay on hover -->
             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
               <span class="opacity-0 group-hover:opacity-100 transition text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded-md">Apply</span>
             </div>
@@ -174,7 +160,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
             <p class="text-[10px] font-semibold text-ink-subtle uppercase tracking-wide">{bg.category}</p>
             <p class="text-xs text-ink font-medium leading-tight">{bg.title}</p>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   </div>
@@ -185,8 +171,8 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   <div id="drawer-panel-uploads" class="drawer-panel flex flex-col flex-1 min-h-0" style="display:none">
 
     <!-- Upload area -->
-    <div class="p-4 border-b border-hairline/60 shrink-0">
-      <label for="bg-upload-input" class="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-hairline hover:border-primary/50 rounded-xl cursor-pointer transition group bg-surface-2/20 hover:bg-primary/5">
+    <div class="p-4 border-b border-hairline/60 shrink-0 space-y-3">
+      <label for="bg-upload-input" class="flex flex-col items-center gap-3 p-5 border-2 border-dashed border-hairline hover:border-primary/50 rounded-xl cursor-pointer transition group bg-surface-2/20 hover:bg-primary/5">
         <div class="w-10 h-10 rounded-full bg-surface-2 group-hover:bg-primary/20 border border-hairline group-hover:border-primary/40 flex items-center justify-center transition">
           <svg class="w-5 h-5 text-ink-subtle group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
@@ -195,16 +181,28 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
         <div class="text-center">
           <p class="text-sm font-semibold text-ink group-hover:text-primary-hover transition">Upload Background</p>
           <p class="text-xs text-ink-subtle mt-0.5">Images (JPG, PNG, WebP) or Videos (MP4, WebM)</p>
-          <p class="text-[10px] text-ink-subtle/60 mt-1">Max 50MB recommended</p>
         </div>
       </label>
       <input type="file" id="bg-upload-input" accept="image/*,video/mp4,video/webm" class="hidden" aria-label="Upload custom background"/>
+
+      <!-- Save external MP4 or image URL directly to server DB -->
+      <form id="custom-url-form" class="flex gap-1.5">
+        <input
+          type="url"
+          id="custom-url-input"
+          placeholder="Or paste MP4 / image URL to save…"
+          class="flex-1 bg-surface-2/70 border border-hairline focus:border-primary-focus focus:outline-none rounded-md px-2.5 py-1.5 text-xs text-ink placeholder-ink-subtle font-sans"
+        />
+        <button type="submit" class="px-3 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition cursor-pointer shrink-0">
+          Save
+        </button>
+      </form>
     </div>
 
     <!-- Custom uploads list -->
     <div id="custom-uploads-list" class="flex-1 overflow-y-auto p-3 space-y-2">
       <p class="text-xs text-ink-subtle text-center py-6" id="no-uploads-msg">
-        No custom uploads yet.<br/>Upload an image or video above!
+        No custom uploads yet.<br/>Upload a file or paste a media URL above.
       </p>
     </div>
   </div>
@@ -216,10 +214,14 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 </style>
 
 <script>
-  // ── Drawer open/close ────────────────────────────────────────────
-  const drawer    = document.getElementById("spaces-drawer");
-  const closeBtn  = document.getElementById("close-drawer");
+  import { recordVideoView, syncVideosFromServer } from '../utils/VideoDatabase';
+
+  const drawer   = document.getElementById("spaces-drawer");
+  const closeBtn = document.getElementById("close-drawer");
   closeBtn?.addEventListener("click", () => drawer?.classList.add("-translate-x-full"));
+
+  // Sync database from server on load
+  syncVideosFromServer().catch(() => {});
 
   // ── Main tab system ──────────────────────────────────────────────
   const mainTabs   = ["spaces", "backgrounds", "uploads"].map(id => document.getElementById(`drawer-tab-${id}`));
@@ -281,18 +283,29 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     });
   });
 
-  // ── Space card click — change background video ───────────────────
+  // ── Space card click — instant local MP4 switch ──────────────────
   spaceCards.forEach(card => {
-    card.addEventListener("click", (e) => {
-      if ((e.target as HTMLElement).closest(".fav-btn")) return;
-      const videoId = card.getAttribute("data-video-id");
-      const title   = card.getAttribute("data-title");
-      const presets = JSON.parse(card.getAttribute("data-presets") || "{}");
-      document.dispatchEvent(new CustomEvent("change-space", { detail: { id: card.getAttribute("data-id"), videoId, title, presets } }));
+    const selectBtn = card.querySelector<HTMLButtonElement>(".space-select-btn");
+    selectBtn?.addEventListener("click", () => {
+      const id          = card.getAttribute("data-id") || "";
+      const contentUrl  = card.getAttribute("data-content-url") || "";
+      const contentType = card.getAttribute("data-content-type") || "direct_video";
+      const title       = card.getAttribute("data-title") || "";
+      let presets: Record<string, number> = {};
+      try { presets = JSON.parse(card.getAttribute("data-presets") || "{}"); } catch {}
+
+      document.dispatchEvent(new CustomEvent("change-space", {
+        detail: { id, contentUrl, contentType, title, presets }
+      }));
+
+      if (id) recordVideoView(id);
       drawer?.classList.add("-translate-x-full");
 
-      // Mark active
-      spaceCards.forEach(c => c.classList.remove("border-primary/50"));
+      spaceCards.forEach(c => {
+        c.classList.remove("border-primary/50");
+        c.classList.add("border-hairline");
+      });
+      card.classList.remove("border-hairline");
       card.classList.add("border-primary/50");
     });
   });
@@ -313,7 +326,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   }
 
   document.querySelectorAll<HTMLButtonElement>(".fav-btn").forEach(btn => {
-    const id   = btn.getAttribute("data-id") || "";
+    const id = btn.getAttribute("data-id") || "";
     const isFav = getFavs().includes(id);
     btn.textContent = isFav ? "⭐" : "☆";
     btn.addEventListener("click", (e) => {
@@ -324,8 +337,8 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
   });
 
   // ── Static background category filter ───────────────────────────
-  const bgCatTabs  = document.querySelectorAll<HTMLButtonElement>(".bg-cat-tab");
-  const bgCards    = document.querySelectorAll<HTMLElement>(".bg-library-card");
+  const bgCatTabs = document.querySelectorAll<HTMLButtonElement>(".bg-cat-tab");
+  const bgCards   = document.querySelectorAll<HTMLElement>(".bg-library-card");
 
   bgCatTabs.forEach(tab => {
     tab.addEventListener("click", () => {
@@ -343,27 +356,26 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     });
   });
 
-  // ── Static background card click — apply as background image ────
   bgCards.forEach(card => {
     card.addEventListener("click", () => {
-      const url   = card.getAttribute("data-bg-url")   || "";
-      const title = card.getAttribute("data-bg-title")  || "";
-      const id    = card.getAttribute("data-bg-id")     || "";
+      const url   = card.getAttribute("data-bg-url") || "";
+      const title = card.getAttribute("data-bg-title") || "";
+      const id    = card.getAttribute("data-bg-id") || "";
 
       document.dispatchEvent(new CustomEvent("change-background", {
         detail: { type: "image", url, title, id }
       }));
 
-      // Visual active state
       bgCards.forEach(c => c.classList.remove("is-active"));
       card.classList.add("is-active");
-
       drawer?.classList.add("-translate-x-full");
     });
   });
 
-  // ── Custom Upload handling ───────────────────────────────────────
+  // ── Custom Upload & Server DB Save handling ─────────────────────
   const uploadInput    = document.getElementById("bg-upload-input") as HTMLInputElement;
+  const customUrlForm  = document.getElementById("custom-url-form") as HTMLFormElement;
+  const customUrlInput = document.getElementById("custom-url-input") as HTMLInputElement;
   const uploadsList    = document.getElementById("custom-uploads-list");
   const noUploadsMsg   = document.getElementById("no-uploads-msg");
 
@@ -391,10 +403,11 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       if (item.contentType === "image") {
         const img = document.createElement("img");
         img.src = item.contentUrl;
+        img.referrerPolicy = "no-referrer";
         img.className = "w-full h-full object-cover";
         preview.appendChild(img);
       } else {
-        preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-lg">🎬</div>`;
+        preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-sm text-ink-subtle font-mono">MP4</div>`;
       }
 
       const info = document.createElement("div");
@@ -409,15 +422,19 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       info.appendChild(typeP);
 
       const del = document.createElement("button");
+      del.type = "button";
       del.className = "text-ink-subtle hover:text-red-400 p-1 rounded transition shrink-0 cursor-pointer";
       del.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
-      del.setAttribute("aria-label", "Delete upload");
+      del.setAttribute("aria-label", `Delete ${item.title}`);
       del.addEventListener("click", (e) => {
         e.stopPropagation();
         try {
           const list: any[] = JSON.parse(localStorage.getItem("sa_custom_backgrounds_v1") || "[]");
           localStorage.setItem("sa_custom_backgrounds_v1", JSON.stringify(list.filter((c: any) => c.id !== item.id)));
         } catch {}
+        if (item.serverId) {
+          fetch(`/api/videos?id=${encodeURIComponent(item.serverId)}`, { method: 'DELETE' }).catch(() => {});
+        }
         renderCustomUploads();
       });
 
@@ -428,7 +445,7 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
       div.addEventListener("click", (e) => {
         if ((e.target as HTMLElement).closest("button")) return;
         document.dispatchEvent(new CustomEvent("change-background", {
-          detail: { type: item.contentType, url: item.contentUrl, title: item.title, id: item.id }
+          detail: { type: item.contentType === "image" ? "image" : "video", url: item.contentUrl, title: item.title, id: item.id }
         }));
         drawer?.classList.add("-translate-x-full");
       });
@@ -450,11 +467,11 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
 
     const saveAndApply = (url: string) => {
       const newUpload = {
-        id:          `upload-${Date.now()}`,
+        id: `upload-${Date.now()}`,
         title,
-        contentUrl:  url,
+        contentUrl: url,
         contentType: type,
-        uploadDate:  new Date().toISOString(),
+        uploadDate: new Date().toISOString(),
       };
 
       try {
@@ -481,7 +498,54 @@ const bgCategories    = ["All", "Minimal", "Nature", "Aesthetic", "Dark Mode", "
     }
   });
 
-  // ── Keyboard: Escape closes drawer ─────────────────────────────
+  customUrlForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const rawUrl = customUrlInput?.value.trim() || "";
+    if (!rawUrl) return;
+    const isImage = /\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(rawUrl);
+    const contentType = isImage ? "image" : "direct_video";
+    let title = "Custom Media";
+    try {
+      const u = new URL(rawUrl, window.location.origin);
+      const base = u.pathname.split("/").pop() || "";
+      if (base) title = base.replace(/\.[^.]+$/, "").slice(0, 40) || title;
+    } catch {}
+
+    let serverId: string | undefined;
+    try {
+      const res = await fetch("/api/videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, contentUrl: rawUrl, contentType }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        serverId = data?.video?.id;
+      }
+    } catch {}
+
+    const newUpload = {
+      id: serverId || `upload-${Date.now()}`,
+      serverId,
+      title,
+      contentUrl: rawUrl,
+      contentType: isImage ? "image" : "video",
+      uploadDate: new Date().toISOString(),
+    };
+    try {
+      const list: any[] = JSON.parse(localStorage.getItem("sa_custom_backgrounds_v1") || "[]");
+      list.unshift(newUpload);
+      localStorage.setItem("sa_custom_backgrounds_v1", JSON.stringify(list.slice(0, 50)));
+    } catch {}
+
+    renderCustomUploads();
+    document.dispatchEvent(new CustomEvent("change-background", {
+      detail: { type: isImage ? "image" : "video", url: rawUrl, title, id: newUpload.id }
+    }));
+    if (customUrlInput) customUrlInput.value = "";
+    drawer?.classList.add("-translate-x-full");
+  });
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !drawer?.classList.contains("-translate-x-full")) {
       drawer?.classList.add("-translate-x-full");
