@@ -10,6 +10,12 @@
  *   - Add auth provider (e.g., supabase.auth.signIn)
  *   - Enable Row Level Security on the tables
  *
+ * This module is the SINGLE source of truth for sessions, activity
+ * and derived statistics. The widgets used to keep private copies of
+ * this logic which drifted apart (month totals showing the week
+ * value, longest streak showing the current streak, day keys built
+ * from UTC dates). Everything now goes through here.
+ *
  * SUPABASE MIGRATION PATH (future):
  *   import { createClient } from '@supabase/supabase-js'
  *   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -18,14 +24,24 @@
 
 // ─── Type Definitions ──────────────────────────────────────────────
 
+export type AuthProvider = 'anonymous' | 'google' | 'github' | 'email' | 'demo';
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  authProvider: 'anonymous' | 'google' | 'github' | 'email';
+  authProvider: AuthProvider;
   avatarUrl?: string;
   createdAt: string;
   lastActiveAt: string;
+}
+
+export interface TimerSettings {
+  pomodoro: number;                     // seconds
+  shortBreak: number;
+  longBreak: number;
+  autoStartBreaks: boolean;
+  autoStartPomodoros: boolean;
 }
 
 export interface UserPreferences {
@@ -33,28 +49,10 @@ export interface UserPreferences {
   theme: 'dark';                          // only dark mode supported
   selectedBackground: string;            // background/space ID
   selectedBackgroundType: 'video' | 'image' | 'youtube';
-  timerSettings: {
-    pomodoro: number;                     // seconds
-    shortBreak: number;
-    longBreak: number;
-    autoStartBreaks: boolean;
-    autoStartPomodoros: boolean;
-  };
+  timerSettings: TimerSettings;
   soundVolumes: Record<string, number>;  // soundId → 0-100
   notifications: boolean;
   focusMode: boolean;
-}
-
-export interface IslandLayout {
-  userId: string;
-  widgets: Record<string, {
-    x: number;
-    y: number;
-    visible: boolean;
-    minimized: boolean;
-    zIndex: number;
-  }>;
-  updatedAt: string;
 }
 
 export interface SessionRecord {
@@ -62,7 +60,7 @@ export interface SessionRecord {
   userId: string;
   startTime: string;
   endTime: string;
-  duration: number;                      // seconds
+  duration: number;                      // seconds actually focused
   mode: 'pomodoro' | 'short' | 'long';
   completed: boolean;
   backgroundUsed?: string;
@@ -71,7 +69,7 @@ export interface SessionRecord {
 
 export interface UserActivity {
   userId: string;
-  date: string;                          // YYYY-MM-DD
+  date: string;                          // YYYY-MM-DD (LOCAL time)
   focusMinutes: number;
   sessionsCompleted: number;
   tasksCompleted: number;
@@ -102,8 +100,10 @@ export interface StudyStats {
   totalTasksCompleted: number;
   mostUsedBackground: string;
   mostProductiveHour: number;           // 0-23
-  achievements: string[];              // achievement IDs
+  achievements: string[];               // achievement IDs
   lastCalculated: string;
+  /** Identifies the session list the snapshot was calculated from. */
+  fingerprint?: string;
 }
 
 export interface FavoriteItem {
@@ -136,8 +136,28 @@ function nowISO(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Local-time YYYY-MM-DD key.
+ *
+ * `toISOString()` returns a UTC timestamp, so using it for a "day"
+ * bucket shifts every session into the previous/next day for anyone
+ * not on UTC. All day bucketing must use the user's local calendar.
+ */
+export function localDateKey(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function todayStr(): string {
-  return new Date().toISOString().split('T')[0];
+  return localDateKey();
+}
+
+/** Local midnight (start of day) for a given local date key. */
+function startOfLocalDay(key: string): number {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0).getTime();
 }
 
 function getStored<T>(key: string): T | null {
@@ -157,7 +177,7 @@ function setStored<T>(key: string, value: T): void {
 
 export function getOrCreateUser(): UserProfile {
   const existing = getStored<UserProfile>(KEYS.USER_PROFILE);
-  if (existing) {
+  if (existing && existing.id) {
     // Update last active
     existing.lastActiveAt = nowISO();
     setStored(KEYS.USER_PROFILE, existing);
@@ -183,12 +203,35 @@ export function updateUserProfile(updates: Partial<UserProfile>): UserProfile {
   return updated;
 }
 
+/** True when the profile represents a real (signed-in) account. */
+export function isSignedIn(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+  return profile.authProvider !== 'anonymous';
+}
+
 // ─── Preferences ───────────────────────────────────────────────────
 
 export function getPreferences(): UserPreferences {
   const user = getOrCreateUser();
   const existing = getStored<UserPreferences>(KEYS.PREFERENCES);
-  if (existing) return existing;
+
+  if (existing) {
+    // Merge forward so preferences saved by an older build keep working
+    // and newly added fields always exist.
+    const ts = existing.timerSettings || {};
+    const merged: UserPreferences = {
+      ...existing,
+      timerSettings: {
+        pomodoro:           ts.pomodoro           ?? 1500,
+        shortBreak:         ts.shortBreak         ?? 300,
+        longBreak:          ts.longBreak          ?? 900,
+        autoStartBreaks:    ts.autoStartBreaks    ?? false,
+        autoStartPomodoros: ts.autoStartPomodoros ?? false,
+      },
+      soundVolumes: existing.soundVolumes || {},
+    };
+    return merged;
+  }
 
   const defaults: UserPreferences = {
     userId:                  user.id,
@@ -217,6 +260,16 @@ export function updatePreferences(updates: Partial<UserPreferences>): UserPrefer
   return updated;
 }
 
+// ─── Sound volumes ─────────────────────────────────────────────────
+
+export function getSoundVolumes(): Record<string, number> {
+  return { ...(getPreferences().soundVolumes || {}) };
+}
+
+export function saveSoundVolumes(volumes: Record<string, number>): void {
+  updatePreferences({ soundVolumes: { ...volumes } });
+}
+
 // ─── Sessions ──────────────────────────────────────────────────────
 
 export function recordSession(session: Omit<SessionRecord, 'id' | 'userId'>): SessionRecord {
@@ -234,7 +287,12 @@ export function recordSession(session: Omit<SessionRecord, 'id' | 'userId'>): Se
   if (sessions.length > 500) sessions.splice(0, sessions.length - 500);
 
   setStored(KEYS.SESSIONS, sessions);
-  updateDailyActivity(session.duration, session.completed);
+  updateDailyActivity(
+    session.duration,
+    session.completed,
+    session.mode,
+    session.startTime
+  );
   return record;
 }
 
@@ -245,15 +303,20 @@ export function getRecentSessions(limit = 30): SessionRecord[] {
 
 // ─── Daily Activity ────────────────────────────────────────────────
 
-function updateDailyActivity(focusSeconds: number, completed: boolean) {
+function updateDailyActivity(
+  focusSeconds: number,
+  completed: boolean,
+  mode: SessionRecord['mode'] = 'pomodoro',
+  startTime?: string
+) {
   const user     = getOrCreateUser();
-  const today    = todayStr();
+  const dayKey   = startTime ? localDateKey(new Date(startTime)) : todayStr();
   const activity = getStored<Record<string, UserActivity>>(KEYS.ACTIVITY) || {};
 
-  if (!activity[today]) {
-    activity[today] = {
+  if (!activity[dayKey]) {
+    activity[dayKey] = {
       userId:            user.id,
-      date:              today,
+      date:              dayKey,
       focusMinutes:      0,
       sessionsCompleted: 0,
       tasksCompleted:    0,
@@ -262,26 +325,56 @@ function updateDailyActivity(focusSeconds: number, completed: boolean) {
     };
   }
 
-  activity[today].focusMinutes     += Math.round(focusSeconds / 60);
-  if (completed) activity[today].sessionsCompleted++;
+  // Only pomodoro sessions count as focus time — breaks are breaks.
+  if (completed && mode === 'pomodoro') {
+    activity[dayKey].focusMinutes += Math.round(focusSeconds / 60);
+    activity[dayKey].sessionsCompleted++;
+  }
 
   // Keep 90 days of activity
   const keys = Object.keys(activity).sort();
-  if (keys.length > 90) delete activity[keys[0]];
+  while (keys.length > 90) {
+    delete activity[keys.shift() as string];
+  }
 
   setStored(KEYS.ACTIVITY, activity);
   recalculateStats();
 }
 
+/** Record a completed task (used by the task list widget). */
+export function recordTaskCompleted(count = 1): void {
+  const user     = getOrCreateUser();
+  const dayKey   = todayStr();
+  const activity = getStored<Record<string, UserActivity>>(KEYS.ACTIVITY) || {};
+
+  if (!activity[dayKey]) {
+    activity[dayKey] = {
+      userId:            user.id,
+      date:              dayKey,
+      focusMinutes:      0,
+      sessionsCompleted: 0,
+      tasksCompleted:    0,
+      backgroundsUsed:   [],
+      widgetsUsed:       [],
+    };
+  }
+
+  activity[dayKey].tasksCompleted += count;
+  setStored(KEYS.ACTIVITY, activity);
+  recalculateStats();
+}
+
 export function getDailyActivity(days = 7): UserActivity[] {
+  const user     = getOrCreateUser();
   const activity = getStored<Record<string, UserActivity>>(KEYS.ACTIVITY) || {};
   const result: UserActivity[] = [];
+
   for (let i = days - 1; i >= 0; i--) {
-    const d   = new Date();
+    const d = new Date();
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().split('T')[0];
+    const key = localDateKey(d);
     result.push(activity[key] || {
-      userId:            '',
+      userId:            user.id,
       date:              key,
       focusMinutes:      0,
       sessionsCompleted: 0,
@@ -300,11 +393,10 @@ export function recalculateStats(): StudyStats {
   const sessions = getStored<SessionRecord[]>(KEYS.SESSIONS) || [];
   const activity = getStored<Record<string, UserActivity>>(KEYS.ACTIVITY) || {};
   const today    = todayStr();
-
-  // Time windows
-  const todayStart  = new Date(today + 'T00:00:00').getTime();
-  const weekStart   = new Date(todayStart - 6 * 86400000).getTime();
-  const monthStart  = new Date(todayStart - 29 * 86400000).getTime();
+  // Time windows (local calendar based)
+  const todayStart  = startOfLocalDay(today);
+  const weekStart   = startOfLocalDay(localDateKey(new Date(Date.now() - 6 * 86400000)));
+  const monthStart  = startOfLocalDay(localDateKey(new Date(Date.now() - 29 * 86400000)));
 
   const completed = sessions.filter(s => s.completed && s.mode === 'pomodoro');
   const totalSecs = completed.reduce((s, r) => s + r.duration, 0);
@@ -329,30 +421,55 @@ export function recalculateStats(): StudyStats {
     ? Math.round(totalSecs / completed.length)
     : 0;
 
-  // Streak calculation
-  let currentStreak = 0, longestStreak = 0, streak = 0;
-  const sortedDays = Object.keys(activity).sort().reverse();
-  const todayHasSessions = (activity[today]?.sessionsCompleted ?? 0) > 0;
-  if (todayHasSessions) {
+  const totalTasks = Object.values(activity)
+    .reduce((sum, a) => sum + (a.tasksCompleted || 0), 0);
+
+  // ── Streak calculation ───────────────────────────────────────────
+  // A streak counts CONSECUTIVE days with at least one completed
+  // session. The previous implementation counted *any* active day,
+  // which inflated both the current and the longest streak.
+  const activeDays = Object.keys(activity)
+    .filter(day => (activity[day].sessionsCompleted || 0) > 0)
+    .sort();
+
+  const activeDaySet = new Set(activeDays);
+
+  let currentStreak = 0;
+  if (activeDaySet.has(today)) {
     currentStreak = 1;
-    for (let i = 1; i < sortedDays.length; i++) {
-      const prev = new Date(sortedDays[i - 1]);
-      const curr = new Date(sortedDays[i]);
-      const diff = (prev.getTime() - curr.getTime()) / 86400000;
-      if (diff === 1 && activity[sortedDays[i]].sessionsCompleted > 0) {
-        currentStreak++;
-      } else break;
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 400; i++) {
+      cursor.setDate(cursor.getDate() - 1);
+      if (activeDaySet.has(localDateKey(cursor))) currentStreak++;
+      else break;
     }
   }
-  streak = 0;
-  for (const day of sortedDays) {
-    if (activity[day].sessionsCompleted > 0) {
-      streak++;
-      if (streak > longestStreak) longestStreak = streak;
+
+  let longestStreak = 0;
+  let run = 0;
+  let prevTime: number | null = null;
+  for (const day of activeDays) {
+    const t = startOfLocalDay(day);
+    // activeDays is sorted ascending, so the gap is (t - prevTime).
+    if (prevTime !== null && Math.round((t - prevTime) / 86400000) === 1) {
+      run++;
     } else {
-      streak = 0;
+      run = 1;
     }
+    prevTime = t;
+    if (run > longestStreak) longestStreak = run;
   }
+
+  // Most productive hour
+  const hourBuckets = new Array(24).fill(0);
+  for (const s of completed) {
+    hourBuckets[new Date(s.startTime).getHours()] += s.duration;
+  }
+  const mostProductiveHour = hourBuckets.reduce(
+    (best, val, idx) => (val > hourBuckets[best] ? idx : best),
+    0
+  );
 
   // Unlocked achievements
   const allAchievements = getAchievementDefinitions();
@@ -367,11 +484,12 @@ export function recalculateStats(): StudyStats {
     totalSessionsCompleted:  completed.length,
     avgSessionDuration:      avgDur,
     longestSession:          longest,
-    totalTasksCompleted:     0,
+    totalTasksCompleted:     totalTasks,
     mostUsedBackground:      'lofi-cafe',
-    mostProductiveHour:      9,
+    mostProductiveHour,
     achievements:            [],
     lastCalculated:          nowISO(),
+    fingerprint:             sessionFingerprint(sessions),
   };
 
   stats.achievements = allAchievements
@@ -382,8 +500,35 @@ export function recalculateStats(): StudyStats {
   return stats;
 }
 
+/**
+ * Fingerprint of the session list. Two snapshots with the same
+ * fingerprint were calculated from the same data, so the cached stats
+ * can be reused. Using a timestamp was not enough: a session saved in
+ * the same millisecond as the last calculation looked "not newer" and
+ * the stats were silently stale.
+ */
+function sessionFingerprint(sessions: SessionRecord[]): string {
+  if (sessions.length === 0) return '0';
+  const last = sessions[sessions.length - 1];
+  return `${sessions.length}:${last.id}:${last.duration}:${last.completed ? 1 : 0}`;
+}
+
+/**
+ * Read the stored statistics, recomputing them when they are missing
+ * or stale. The stats widget used to render "0m" for everyone who had
+ * not finished a session since the last page load.
+ */
 export function getStats(): StudyStats {
-  return getStored<StudyStats>(KEYS.STATS) || recalculateStats();
+  const stored   = getStored<StudyStats>(KEYS.STATS);
+  const sessions = getStored<SessionRecord[]>(KEYS.SESSIONS) || [];
+
+  if (!stored) return recalculateStats();
+
+  if (stored.fingerprint !== sessionFingerprint(sessions)) {
+    return recalculateStats();
+  }
+
+  return stored;
 }
 
 // ─── Achievements ──────────────────────────────────────────────────

@@ -3,9 +3,21 @@
  * ─────────────────────────────────────────────────────────────────
  * Client-side video/background database for StudyAesthetic.
  *
- * Stores all background videos (YouTube + static images) with full
- * metadata. Seeded with the 12 existing spaces + static background
- * categories. Designed for drop-in Supabase migration.
+ * This module is the SINGLE source of truth for the background
+ * library. The drawer used to keep its own hard-coded copy of the
+ * same data, which had already drifted out of sync with this file.
+ *
+ * Storage layout:
+ *   - The curated library (SEED_VIDEOS) lives in code and is never
+ *     written to localStorage, so catalogue updates reach every user
+ *     immediately instead of being frozen in a stale cache.
+ *   - User uploads live in localStorage under `sa_custom_backgrounds_v1`.
+ *
+ * Uploads:
+ *   - Images are stored as data URLs so they survive a reload.
+ *   - Videos are referenced by an object URL, which only lives for the
+ *     current page session. The stored entry keeps a marker so the UI
+ *     can tell the user the video needs re-selecting.
  *
  * SUPABASE MIGRATION PATH (future):
  *   Table: `videos` with RLS policies
@@ -49,7 +61,8 @@ export interface VideoEntry {
   activeUsers?: string;           // display string e.g. "4.8k"
   presetSounds?: Record<string, number>;  // soundId → volume 0-100
   isCustom?:    boolean;          // user-uploaded content
-  isUserFavorite?: boolean;       // runtime flag (not persisted here)
+  /** Set when an uploaded video's object URL is no longer valid. */
+  sessionOnly?: boolean;
 }
 
 export interface BackgroundCollection {
@@ -61,11 +74,15 @@ export interface BackgroundCollection {
   isPublic:    boolean;
 }
 
-// ─── Storage key ───────────────────────────────────────────────────
+// ─── Storage keys ──────────────────────────────────────────────────
 
-const DB_KEY          = 'sa_video_db_v1';
 const CUSTOM_KEY      = 'sa_custom_backgrounds_v1';
 const COLLECTIONS_KEY = 'sa_bg_collections_v1';
+
+/** Max size (bytes) for an image persisted as a data URL. */
+export const MAX_IMAGE_UPLOAD_BYTES = 3 * 1024 * 1024;
+/** Max size (bytes) for an uploaded video kept in session. */
+export const MAX_VIDEO_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 // ─── Seed Data ─────────────────────────────────────────────────────
 
@@ -292,7 +309,7 @@ const SEED_VIDEOS: VideoEntry[] = [
   // ── Static Image Backgrounds ──────────────────────────────────
   {
     id: 'static-minimal-dark',
-    title: 'Minimal Dark Gradient',
+    title: 'Minimal Dark',
     description: 'Clean minimal dark background for distraction-free focus.',
     category: 'Minimal',
     tags: ['minimal', 'dark', 'clean', 'gradient'],
@@ -307,8 +324,24 @@ const SEED_VIDEOS: VideoEntry[] = [
     isNew:        false,
   },
   {
+    id: 'static-library-books',
+    title: 'Warm Library',
+    description: 'Warm-toned library book shelves — the scent of learning.',
+    category: 'Aesthetic',
+    tags: ['library', 'books', 'warm', 'aesthetic', 'learning'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    8200,
+    status:       'active',
+    isFeatured:   true,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
     id: 'static-forest',
-    title: 'Misty Forest Morning',
+    title: 'Misty Forest',
     description: 'A foggy forest path in the early morning light.',
     category: 'Nature',
     tags: ['forest', 'nature', 'misty', 'morning', 'green'],
@@ -355,24 +388,8 @@ const SEED_VIDEOS: VideoEntry[] = [
     isNew:        false,
   },
   {
-    id: 'static-library-books',
-    title: 'Warm Library Shelves',
-    description: 'Warm-toned library book shelves — the scent of learning.',
-    category: 'Aesthetic',
-    tags: ['library', 'books', 'warm', 'aesthetic', 'learning'],
-    thumbnailUrl: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=400&q=80',
-    contentUrl:   'https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=1920&q=90',
-    contentType:  'image',
-    uploadDate:   '2024-01-01',
-    viewCount:    8200,
-    status:       'active',
-    isFeatured:   true,
-    isTrending:   false,
-    isNew:        false,
-  },
-  {
     id: 'static-dark-desk',
-    title: 'Minimal Dark Desk',
+    title: 'Dark Desk Setup',
     description: 'A clean dark desktop setup for productivity.',
     category: 'Dark Mode',
     tags: ['desk', 'dark', 'minimal', 'productivity', 'setup'],
@@ -386,29 +403,130 @@ const SEED_VIDEOS: VideoEntry[] = [
     isTrending:   false,
     isNew:        false,
   },
+  {
+    id: 'static-mountains',
+    title: 'Snowy Mountains',
+    description: 'A cold, quiet alpine ridge above the clouds.',
+    category: 'Nature',
+    tags: ['mountains', 'snow', 'alpine', 'quiet'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    3100,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
+    id: 'static-neon-city',
+    title: 'Neon City Night',
+    description: 'Wet neon streets after midnight.',
+    category: 'Aesthetic',
+    tags: ['neon', 'city', 'night', 'cyberpunk'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    2900,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
+    id: 'static-sakura',
+    title: 'Cherry Blossoms',
+    description: 'Soft pink blossom branches in spring light.',
+    category: 'Aesthetic',
+    tags: ['sakura', 'spring', 'blossom', 'soft'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1522383225753-aa2895ea5b3e?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    6100,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
+    id: 'static-space',
+    title: 'Deep Space',
+    description: 'A field of stars with the earth far below.',
+    category: 'Abstract',
+    tags: ['space', 'stars', 'cosmos', 'deep'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    7300,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
+    id: 'static-coffee-table',
+    title: 'Aesthetic Coffee',
+    description: 'A warm cup on a wooden table.',
+    category: 'Minimal',
+    tags: ['coffee', 'minimal', 'warm', 'table'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    4500,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
+  {
+    id: 'static-dark-gradient',
+    title: 'Ink Dark Gradient',
+    description: 'A deep ink gradient for late-night sessions.',
+    category: 'Dark Mode',
+    tags: ['ink', 'gradient', 'dark', 'night'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&q=80',
+    contentUrl:   'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1920&q=90',
+    contentType:  'image',
+    uploadDate:   '2024-01-01',
+    viewCount:    5200,
+    status:       'active',
+    isFeatured:   false,
+    isTrending:   false,
+    isNew:        false,
+  },
 ];
 
-// ─── Database Init ─────────────────────────────────────────────────
+// ─── Session-scoped object URLs ────────────────────────────────────
+// Uploaded videos use `URL.createObjectURL`, which is only valid for
+// the lifetime of the document. The mapping keeps the live URL while
+// the tab is open; the persisted entry only remembers the id.
+const sessionUrls = new Map<string, string>();
 
-function initDB(): VideoEntry[] {
-  const stored = localStorage.getItem(DB_KEY);
-  if (stored) {
-    try { return JSON.parse(stored); } catch {}
+export function registerSessionUpload(id: string, url: string): void {
+  sessionUrls.set(id, url);
+}
+
+export function getSessionUploadUrl(id: string): string {
+  return sessionUrls.get(id) || '';
+}
+
+// ─── Database access ───────────────────────────────────────────────
+
+function safeStorage(): Storage | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+  } catch {
+    return null;
   }
-  // First run — seed with defaults
-  localStorage.setItem(DB_KEY, JSON.stringify(SEED_VIDEOS));
-  return SEED_VIDEOS;
 }
-
-function saveDB(videos: VideoEntry[]) {
-  try { localStorage.setItem(DB_KEY, JSON.stringify(videos)); } catch {}
-}
-
-// ─── CRUD Operations ───────────────────────────────────────────────
 
 export function getAllVideos(): VideoEntry[] {
-  if (typeof localStorage === 'undefined') return SEED_VIDEOS;
-  return initDB();
+  return [...SEED_VIDEOS, ...getCustomUploads()];
 }
 
 export function getVideo(id: string): VideoEntry | undefined {
@@ -431,6 +549,14 @@ export function getNewVideos(): VideoEntry[] {
   return getActiveVideos().filter(v => v.isNew);
 }
 
+export function getVideoSpaces(): VideoEntry[] {
+  return getActiveVideos().filter(v => v.contentType === 'youtube');
+}
+
+export function getStaticBackgrounds(): VideoEntry[] {
+  return getActiveVideos().filter(v => v.contentType === 'image' && !v.isCustom);
+}
+
 export function getByCategory(category: BackgroundCat): VideoEntry[] {
   return getActiveVideos().filter(v => v.category === category);
 }
@@ -439,65 +565,54 @@ export function getByContentType(type: ContentType): VideoEntry[] {
   return getActiveVideos().filter(v => v.contentType === type);
 }
 
+// ─── Custom uploads ────────────────────────────────────────────────
+
 export function getCustomUploads(): VideoEntry[] {
-  const custom = localStorage.getItem(CUSTOM_KEY);
-  try { return custom ? JSON.parse(custom) : []; } catch { return []; }
+  const store = safeStorage();
+  if (!store) return [];
+  try {
+    const raw = store.getItem(CUSTOM_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
-export function searchVideos(query: string): VideoEntry[] {
-  const q   = query.toLowerCase().trim();
-  if (!q) return getActiveVideos();
-  return getActiveVideos().filter(v =>
-    v.title.toLowerCase().includes(q) ||
-    v.description.toLowerCase().includes(q) ||
-    v.tags.some(t => t.includes(q)) ||
-    v.category.toLowerCase().includes(q)
-  );
+function saveCustomUploads(videos: VideoEntry[]): void {
+  const store = safeStorage();
+  if (!store) return;
+  try {
+    store.setItem(CUSTOM_KEY, JSON.stringify(videos.slice(0, 50)));
+  } catch {
+    // Quota exceeded — the caller surfaces this to the user.
+    throw new Error('Storage quota exceeded while saving the upload.');
+  }
 }
 
-export function addVideo(video: Omit<VideoEntry, 'id' | 'uploadDate' | 'viewCount'>): VideoEntry {
-  const videos = getAllVideos();
-  const newVideo: VideoEntry = {
-    ...video,
-    id:         `custom-${Date.now()}`,
-    uploadDate: new Date().toISOString().split('T')[0],
-    viewCount:  0,
-  };
-  videos.push(newVideo);
-  saveDB(videos);
-  return newVideo;
+export interface UploadResult {
+  entry: VideoEntry;
+  /** Populated for videos: the live object URL for this session. */
+  sessionUrl?: string;
 }
 
-export function updateVideo(id: string, updates: Partial<VideoEntry>): VideoEntry | null {
-  const videos = getAllVideos();
-  const idx    = videos.findIndex(v => v.id === id);
-  if (idx < 0) return null;
-  videos[idx] = { ...videos[idx], ...updates };
-  saveDB(videos);
-  return videos[idx];
-}
-
-export function deleteVideo(id: string): boolean {
-  const videos  = getAllVideos();
-  const filtered = videos.filter(v => v.id !== id);
-  if (filtered.length === videos.length) return false;
-  saveDB(filtered);
-  return true;
-}
-
-export function incrementViewCount(id: string) {
-  updateVideo(id, { viewCount: (getVideo(id)?.viewCount ?? 0) + 1 });
-}
-
+/**
+ * Persist a user upload.
+ * - Images are stored as data URLs and survive a reload.
+ * - Videos are session-only; the entry is remembered but flagged so
+ *   the UI can ask the user to re-select the file after a reload.
+ */
 export function addCustomUpload(
   name: string,
   url: string,
   type: ContentType,
   thumbnailUrl?: string,
   category: BackgroundCat = 'Custom'
-): VideoEntry {
-  const custom: VideoEntry = {
-    id:           `upload-${Date.now()}`,
+): UploadResult {
+  const id = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const entry: VideoEntry = {
+    id,
     title:        name,
     description:  'Custom upload',
     category,
@@ -514,23 +629,44 @@ export function addCustomUpload(
     isCustom:     true,
   };
 
+  if (type === 'direct_video') {
+    entry.sessionOnly = true;
+    entry.contentUrl = '';
+    entry.thumbnailUrl = '';
+    registerSessionUpload(id, url);
+  }
+
   const customs = getCustomUploads();
-  customs.unshift(custom);
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs.slice(0, 50)));
-  return custom;
+  customs.unshift(entry);
+  saveCustomUploads(customs);
+
+  return { entry, sessionUrl: type === 'direct_video' ? url : undefined };
 }
 
 export function removeCustomUpload(id: string) {
   const customs  = getCustomUploads();
   const filtered = customs.filter((c: VideoEntry) => c.id !== id);
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(filtered));
+  saveCustomUploads(filtered);
+  const live = sessionUrls.get(id);
+  if (live) {
+    URL.revokeObjectURL(live);
+    sessionUrls.delete(id);
+  }
+}
+
+/** Resolve the playable URL for a custom upload (may be empty). */
+export function resolveContentUrl(entry: VideoEntry): string {
+  if (entry.contentUrl) return entry.contentUrl;
+  return getSessionUploadUrl(entry.id);
 }
 
 // ─── Collections ───────────────────────────────────────────────────
 
 export function getCollections(): BackgroundCollection[] {
+  const store = safeStorage();
+  if (!store) return [];
   try {
-    const stored = localStorage.getItem(COLLECTIONS_KEY);
+    const stored = store.getItem(COLLECTIONS_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch { return []; }
 }
@@ -546,7 +682,8 @@ export function createCollection(title: string, description = ''): BackgroundCol
     isPublic:    false,
   };
   collections.push(col);
-  localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections));
+  const store = safeStorage();
+  try { store?.setItem(COLLECTIONS_KEY, JSON.stringify(collections)); } catch {}
   return col;
 }
 
@@ -555,7 +692,8 @@ export function addToCollection(collectionId: string, videoId: string) {
   const col         = collections.find(c => c.id === collectionId);
   if (!col || col.itemIds.includes(videoId)) return;
   col.itemIds.push(videoId);
-  localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections));
+  const store = safeStorage();
+  try { store?.setItem(COLLECTIONS_KEY, JSON.stringify(collections)); } catch {}
 }
 
 // ─── Available Categories ──────────────────────────────────────────

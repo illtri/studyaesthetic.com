@@ -78,7 +78,7 @@
     </div>
 
     <!-- Start/stop -->
-    <button id="breath-start" class="w-full bg-primary hover:bg-primary-hover active:bg-primary-focus text-white font-semibold text-sm py-2.5 rounded-lg transition cursor-pointer">
+    <button id="breath-start" class="w-full bg-primary hover:bg-primary-hover active:bg-primary-focus text-white font-semibold text-sm py-2.5 rounded-lg transition cursor-pointer" aria-pressed="false">
       Start Breathing
     </button>
   </div>
@@ -89,7 +89,9 @@
   const minimizeBtn = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    widget?.classList.toggle("is-minimized");
+    const minimized = widget?.classList.toggle("is-minimized");
+    minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
+    minimizeBtn.setAttribute("aria-label", minimized ? "Expand breathing widget" : "Minimize breathing widget");
   });
 
   const circle       = document.getElementById("breath-circle") as HTMLElement;
@@ -107,9 +109,28 @@
   let countdownTimer: ReturnType<typeof setInterval> | null = null;
   let isRunning = false;
 
+  // ── Audio ───────────────────────────────────────────────────────
+  // A single AudioContext is reused: creating one per phase exhausts
+  // the browser's context limit and the chimes stop playing.
+  let audioCtx: AudioContext | null = null;
+  function getAudioCtx(): AudioContext | null {
+    try {
+      if (!audioCtx) {
+        const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+        if (!Ctor) return null;
+        audioCtx = new Ctor();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      return audioCtx;
+    } catch {
+      return null;
+    }
+  }
+
   function playChime(freq = 440, dur = 0.6) {
     try {
-      const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ac = getAudioCtx();
+      if (!ac) return;
       const osc = ac.createOscillator();
       const gain = ac.createGain();
       osc.type = "sine";
@@ -120,6 +141,17 @@
       osc.connect(gain); gain.connect(ac.destination);
       osc.start(); osc.stop(ac.currentTime + dur);
     } catch {}
+  }
+
+  /**
+   * Read a duration input as a safe number of seconds.
+   * An empty or non-numeric field used to produce NaN, which made the
+   * phase timers fire instantly and spin the loop as fast as possible.
+   */
+  function readDuration(input: HTMLInputElement, fallback: number, min: number, max: number): number {
+    const parsed = parseInt(input?.value ?? "", 10);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
   }
 
   function setPhase(name: string, size: number, color: string, icon: string, ringSize: number, ringMidSize: number) {
@@ -148,27 +180,27 @@
 
   function breathCycle() {
     if (!isRunning) return;
-    const inhale  = parseInt(inhaleInput?.value  || "4") * 1000;
-    const hold    = parseInt(holdInput?.value    || "4") * 1000;
-    const exhale  = parseInt(exhaleInput?.value  || "6") * 1000;
+    const inhale  = readDuration(inhaleInput, 4, 1, 15) * 1000;
+    const hold    = readDuration(holdInput,   4, 0, 15) * 1000;
+    const exhale  = readDuration(exhaleInput, 6, 1, 15) * 1000;
 
     playChime(523.25, 0.5);
     startCountdown(inhale / 1000, "Inhale…",  "🌬️", 108, "linear-gradient(135deg,rgba(94,106,210,0.7),rgba(130,143,255,0.5))", 134, 112);
-    circle.style.transition = `width ${inhale}ms ease-in-out, height ${inhale}ms ease-in-out, background ${inhale}ms ease`;
+    if (circle) circle.style.transition = `width ${inhale}ms ease-in-out, height ${inhale}ms ease-in-out, background ${inhale}ms ease`;
 
     breathTimer = setTimeout(() => {
       if (!isRunning) return;
       if (hold > 0) {
         playChime(440, 0.3);
         startCountdown(hold / 1000, "Hold…", "✨", 108, "linear-gradient(135deg,rgba(130,143,255,0.6),rgba(94,106,210,0.5))", 128, 106);
-        circle.style.transition = `width ${hold}ms ease-in-out, height ${hold}ms ease-in-out, background ${hold}ms ease`;
+        if (circle) circle.style.transition = `width ${hold}ms ease-in-out, height ${hold}ms ease-in-out, background ${hold}ms ease`;
       }
 
       breathTimer = setTimeout(() => {
         if (!isRunning) return;
         playChime(392, 0.6);
         startCountdown(exhale / 1000, "Exhale…", "😮‍💨", 64, "linear-gradient(135deg,rgba(94,106,210,0.4),rgba(122,127,173,0.3))", 98, 80);
-        circle.style.transition = `width ${exhale}ms ease-in-out, height ${exhale}ms ease-in-out, background ${exhale}ms ease`;
+        if (circle) circle.style.transition = `width ${exhale}ms ease-in-out, height ${exhale}ms ease-in-out, background ${exhale}ms ease`;
 
         breathTimer = setTimeout(() => {
           if (isRunning) breathCycle();
@@ -182,17 +214,22 @@
     if (breathTimer) { clearTimeout(breathTimer); breathTimer = null; }
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
     setPhase("Ready", 64, "linear-gradient(135deg,rgba(94,106,210,0.6),rgba(94,106,210,0.4))", "🌬️", 130, 110);
-    circle.style.transition = "width 0.6s ease, height 0.6s ease, background 0.6s ease";
+    if (circle) circle.style.transition = "width 0.6s ease, height 0.6s ease, background 0.6s ease";
     if (countdownEl) countdownEl.textContent = "—";
-    if (startBtn) startBtn.textContent = "Start Breathing";
-    const config = document.getElementById("breath-controls");
-    inhaleInput.disabled = false; holdInput.disabled = false; exhaleInput.disabled = false;
+    if (startBtn) {
+      startBtn.textContent = "Start Breathing";
+      startBtn.setAttribute("aria-pressed", "false");
+    }
+    if (inhaleInput) inhaleInput.disabled = false;
+    if (holdInput)   holdInput.disabled = false;
+    if (exhaleInput) exhaleInput.disabled = false;
   }
 
   startBtn?.addEventListener("click", () => {
     if (isRunning) { stopBreathing(); return; }
     isRunning = true;
     startBtn.textContent = "Stop";
+    startBtn.setAttribute("aria-pressed", "true");
     inhaleInput.disabled = true; holdInput.disabled = true; exhaleInput.disabled = true;
     breathCycle();
   });

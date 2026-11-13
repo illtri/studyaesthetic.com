@@ -27,9 +27,11 @@
 
   <!-- Body -->
   <div class="widget-body px-4 pb-4 pt-4 flex flex-col">
-    <div id="tasks-list" class="max-h-[180px] overflow-y-auto space-y-2 mb-4 scrollbar-thin" aria-live="polite">
+    <div id="tasks-list" class="max-h-[180px] overflow-y-auto space-y-2 mb-4 scrollbar-thin">
       <div id="no-tasks-message" class="text-xs text-ink-subtle text-center py-4">No tasks yet. Add one below!</div>
     </div>
+    <!-- Announced to screen readers without re-announcing the whole list -->
+    <p id="tasks-status" class="sr-only" role="status" aria-live="polite"></p>
     <form id="add-task-form" class="flex items-center gap-2">
       <input
         type="text"
@@ -46,13 +48,18 @@
 </div>
 
 <script>
+  import { recordTaskCompleted } from '../utils/UserStore';
+  import { showToast } from '../utils/toast';
+
   interface Task { id: string; text: string; completed: boolean; }
 
   const widget      = document.getElementById("tasks-widget");
   const minimizeBtn = widget?.querySelector(".minimize-btn");
   minimizeBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    widget?.classList.toggle("is-minimized");
+    const minimized = widget?.classList.toggle("is-minimized");
+    minimizeBtn.setAttribute("aria-expanded", minimized ? "false" : "true");
+    minimizeBtn.setAttribute("aria-label", minimized ? "Expand tasks widget" : "Minimize tasks widget");
   });
 
   const tasksList       = document.getElementById("tasks-list");
@@ -61,23 +68,41 @@
   const taskInput       = document.getElementById("task-input") as HTMLInputElement;
   let tasks: Task[] = [];
 
-  const stored = localStorage.getItem("study-tasks");
-  if (stored) { tasks = JSON.parse(stored); renderTasks(); }
+  // Guard against corrupted storage: an unparsable value used to throw
+  // at module scope and kill the rest of the widget's script.
+  try {
+    const stored = localStorage.getItem("study-tasks");
+    const parsed = stored ? JSON.parse(stored) : [];
+    if (Array.isArray(parsed)) tasks = parsed;
+  } catch {
+    tasks = [];
+  }
+  renderTasks();
 
   addForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     const text = taskInput.value.trim();
     if (!text) return;
-    tasks.push({ id: Date.now().toString(), text, completed: false });
+    tasks.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, text, completed: false });
     saveTasks(); renderTasks();
     taskInput.value = "";
+    taskInput.focus();
   });
 
-  function saveTasks() { localStorage.setItem("study-tasks", JSON.stringify(tasks)); }
+  function saveTasks() {
+    try { localStorage.setItem("study-tasks", JSON.stringify(tasks)); } catch {}
+  }
 
   function renderTasks() {
     if (!tasksList) return;
     tasksList.querySelectorAll(".task-item").forEach(el => el.remove());
+    const status = document.getElementById("tasks-status");
+    const remaining = tasks.filter(t => !t.completed).length;
+    if (status) {
+      status.textContent = tasks.length === 0
+        ? "No tasks yet."
+        : `${tasks.length} task${tasks.length > 1 ? "s" : ""}, ${remaining} remaining.`;
+    }
     if (tasks.length === 0) { noTasksMessage?.classList.remove("hidden"); return; }
     noTasksMessage?.classList.add("hidden");
     tasks.forEach(task => {
@@ -89,8 +114,15 @@
       checkBtn.type = "button";
       checkBtn.className = `w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center shrink-0 ${task.completed ? "bg-primary border-primary text-white" : "border-hairline hover:border-primary-focus bg-surface-1"}`;
       checkBtn.setAttribute("aria-label", task.completed ? "Mark incomplete" : "Mark complete");
+      checkBtn.setAttribute("aria-pressed", task.completed ? "true" : "false");
       checkBtn.innerHTML = task.completed ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>` : "";
-      checkBtn.addEventListener("click", () => { task.completed = !task.completed; saveTasks(); renderTasks(); });
+      checkBtn.addEventListener("click", () => {
+        task.completed = !task.completed;
+        if (task.completed) {
+          try { recordTaskCompleted(1); } catch (e) { console.warn(e); }
+        }
+        saveTasks(); renderTasks();
+      });
       const textSpan = document.createElement("span");
       textSpan.className = `text-xs font-sans truncate ${task.completed ? "line-through text-ink-subtle" : "text-ink-muted"}`;
       textSpan.textContent = task.text;
@@ -98,9 +130,26 @@
       const del = document.createElement("button");
       del.type = "button";
       del.className = "text-ink-subtle hover:text-ink hover:bg-surface-2 p-1 rounded transition cursor-pointer shrink-0";
-      del.setAttribute("aria-label", "Delete task");
+      del.setAttribute("aria-label", `Delete task: ${task.text}`);
       del.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
-      del.addEventListener("click", () => { tasks = tasks.filter(t => t.id !== task.id); saveTasks(); renderTasks(); });
+      del.addEventListener("click", () => {
+        // Destructive action — offer an undo window instead of deleting
+        // the task with no way back.
+        const index = tasks.findIndex(t => t.id === task.id);
+        if (index < 0) return;
+        const removed = tasks.splice(index, 1)[0];
+        saveTasks(); renderTasks();
+        showToast("Task deleted", {
+          duration: 6000,
+          action: {
+            label: "Undo",
+            onClick: () => {
+              tasks.splice(index, 0, removed);
+              saveTasks(); renderTasks();
+            },
+          },
+        });
+      });
       item.appendChild(left); item.appendChild(del); tasksList.appendChild(item);
     });
   }
