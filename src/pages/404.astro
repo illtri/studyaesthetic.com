@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Page Not Found | Aesthetic Study">
+  <main class="w-full h-full flex items-center justify-center p-6 animated-bg-fallback">
+    <div class="glass rounded-2xl p-8 max-w-md w-full text-center border border-hairline edge-highlight">
+      <p class="font-mono text-xs uppercase tracking-widest text-primary-hover mb-2">404</p>
+      <h1 class="font-sans text-xl font-bold text-ink tracking-tight mb-2">Page not found</h1>
+      <p class="text-xs text-ink-subtle mb-6 leading-relaxed">
+        The page you requested doesn&apos;t exist. Return to your study workspace to continue focusing.
+      </p>
+      <a
+        href="/"
+        class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition border border-primary-focus/40"
+      >
+        Back to Study Space
+      </a>
+    </div>
+  </main>
+</Layout>
